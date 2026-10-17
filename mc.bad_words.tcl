@@ -1,7 +1,9 @@
 ##
-# Bad Words v4.0.3
+# Bad Words v4.1
 #  by MC_8 - Carl M. Gregory <mc8@purehype.net>
 #  This script will only run on eggdrop 1.5.5 or greater.
+#
+#    R.I.P. Mom, To always be remembered; Nancy Marie Gregory.
 #
 # My Website - http://mc.purehype.net:81/
 # Have a bug?  http://mc.purehype.net:81/bugzilla/
@@ -11,10 +13,13 @@
 # Description
 ##
 # This script will kick and ban anyone in a specified room that mentions a
-# certin word (wildcards accepted).
+# certain word (wildcards accepted).
 #
 # I use this script to ban those whom spam other channels as well as websites n`
 # such.  If you do the same, I suggest using mc.spamcheck as well.
+#
+# Please note that this script can handle channels with extended ascii character, but
+# only if your using TCL 8.2 or better.
 ##
 
 ##
@@ -52,7 +57,7 @@
 #       (like in the above examples) then it never expires.
 #     +badword
 #       This will start the +badword prompt interface.  If the above examples
-#       confuse you, just do this command instead to recieve a walk through 'add
+#       confuse you, just do this command instead to receive a walk through 'add
 #       badwords' interface.
 #
 # -badword [#channel|&message|&global] <*bad*string*>
@@ -82,7 +87,7 @@
 #       entry will expire it's self in 1 day.
 #     +exemptword
 #       This will start the +exemptword prompt interface.  If the above examples
-#       confuse you, just do this command instead to recieve a walk through 'add
+#       confuse you, just do this command instead to receive a walk through 'add
 #       exemptwords' interface.
 #
 # -exemptword [#channel|&message|&global] <*exempt*string*>
@@ -107,27 +112,27 @@
 #
 # chanset <#channel> <+/->mc.bw.exemptop
 #   This will do the same as the one above (the exempt voice one), but instead
-#   of voice it's asking if you want to exempt ops.  Examples are relativly the
+#   of voice it's asking if you want to exempt ops.  Examples are relatively the
 #   same as well.
 #
 # chattr <bot> +B [channel]
 #   You can share your badwords entries with other bot's; the bots you want to
-#   share your badwords and exemptwords entrys with must --
+#   share your badwords and exemptwords entries with must --
 #     1) have the +B flag, must be added and linked and
 #     2) must all have this script loaded.
-#   If you don't submit a channel the B flag will be asigned globally, witch
+#   If you don't submit a channel the B flag will be assigned globally, witch
 #   means it will be a global share as opposed to only sharing specific badwords
 #   for a specified channel.
 #   NOTE:
-#     o Please note that &message and &global badword and exempt word entrys are
-#       sent through the shared pipe for global global shares.
+#     o Please note that &message and &global badword and exempt word entries are
+#       sent through the shared pipe for global shares.
 #     o Entries never overwrite themselves.
-#     o For better usefullness, there is no agressive and passive sharing
+#     o For better usefulness, there is no aggressive and passive sharing
 #       involved in this.  However, keep in mind, if one of the share bots are
 #       not linked and you do a .-badword; the bot that's not linked will never
 #       know you removed it.  It's the same way with core eggdrop sharing of
-#       ban's (for referance).
-#     o The flag 'B' is changable, incase 'B' conflicts with some other script.
+#       ban's (for reference).
+#     o The flag 'B' is changeable, incase 'B' conflicts with some other script.
 #
 #
 # Usefull information:
@@ -136,15 +141,15 @@
 #    Example:
 #      +badword #eggdrop "* pussy *" Go away.
 #        If you think about it, if you set this to "*pussy*" it would wind up
-#        banning people for even saying 'pussywillow' witch isn't really what
+#        banning people for even saying 'pussy willow' witch isn't really what
 #        were worried about.
 #  - If your adding a *bad*string* (or *exempt*string*) that contains a "
 #    (quotation mark) then escape it.
 #     Example:
 #       +badword #eggdrop "* \"pussy *" Go away.
 #         This will ban anyone that says "pussy as a word.  To escape something
-#         (in TCL) means to put a '\' infront of it.
-#  - The kick/warning message can have the following replacment veriables:
+#         (in TCL) means to put a '\' in front of it.
+#  - The kick/warning message can have the following replacement variables:
 #      %channel == Channel it's for (&global/ &message/ #a_channel)
 #      %method  == Method used (action/ msg/ notice/ pub).
 #      %string  == The *ban*string* that was triggered by the user.
@@ -154,7 +159,7 @@
 #          So, if someone private messages the bot with something, and it's not
 #          exempt (in exempt list); the user will get a kick message that states
 #          "Anti spam, do not msg me!"
-#  - *bad*string*'s (and *exempt*string*'s) don't bother with case sensativity.
+#  - *bad*string*'s (and *exempt*string*'s) don't bother with case sensitivity.
 #  - Avilable wildcards for the *bad*string*'s (and *exempt*string*'s) are:
 #      *       = Matches any sequence of characters in string, including a null
 #                string.
@@ -171,11 +176,11 @@
 ##
 #
 
-# What flaged users should only be allowed to perform the dcc commands listed
+# What flagged users should only be allowed to perform the dcc commands listed
 # above in this script?  Flag format is "<global>|<channel>".
 set mc_bw(access) "m|m"
 
-# What flaged users are exempt from this script?  Set this to "" to disable.
+# What flagged users are exempt from this script?  Set this to "" to disable.
 # Flag format is "<global>|<channel>".
 set mc_bw(exempt:flag) "b|"
 
@@ -205,7 +210,7 @@ set mc_bw(warn_kick) 0
 
 # Upon warning, what modes to you want to change in the channel?  Set this to ""
 # to disable.
-# Replacment veriables:
+# Replacment variables:
 #   %botnick == The bot's nick.
 #   %nick    == The person's nick in violation.
 # Example:
@@ -220,7 +225,7 @@ set mc_bw(warn_mode) ""
 #    0 = Performs a server ban, but doesn't store the ban in the bot's ban list.
 #  Any number greater than 0 will be the time in witch the ban will expire.  All
 #  ban's will be channel ban's, if you want it to be a global ban -- put a "@"
-#  infront of the time.
+#  in front of the time.
 #    Example:  set mc_bw(bantime) @1440
 #  Also, if you want the ban to be 'sticky' (read '.help stick' in the bot's dcc
 #  console), append the value with a "!".
@@ -244,13 +249,13 @@ set mc_bw(bantime) 1440
 #                  host.domain, it replaces the numbers in the host.domain with
 #                  a '?' (question mark) wildcard.
 #       ip       = It will mask as normal, with no '?' (question mark)
-#                  replacments as does hostname.
+#                  replacements as does hostname.
 set mc_bw(banmask) 11
 
 # What flag should the script use to designate another bot as sharing with this
 # script?  If your not sure as to what to set this to, then just leave it set to
 # "B".  This setting is here just incase another script uses the "B" custom flag
-# (as not not conflict, so it's changable).  Valid flags here can be A through Z
+# (as not conflict, so it's changeable).  Valid flags here can be A through Z
 # (capital letters ONLY).
 set mc_bw(share:flag) "B"
 
@@ -259,7 +264,7 @@ set mc_bw(share:flag) "B"
 # isn't opped to punish them, do you want the script to broadcast to the botnet
 # to punish the user in violation?
 # Note:
-#   o Only bots that follow the criterias below can utalize this function
+#   o Only bots that follow the criteria below can utilize this function
 #       1) The other bot?s? have to be linked.
 #       2) The other bot?s? have to use mc.badwords also.
 #       3) The other bot?s? have to have the mc_bw(relay:rx) setting enabled.
@@ -278,7 +283,7 @@ set mc_bw(relay:tx) 1
 #     changes other than the +b channel mode (ban).
 set mc_bw(relay:rx) 1
 
-# The 'relay:tx' and 'relay:rx' only communicate to eachother if both scripts
+# The 'relay:tx' and 'relay:rx' only communicate to each other if both scripts
 # have the same key.  This eliminates the problem of many bots on a botnet using
 # the same script but only 2 should be in use for YOUR bots, the others are just
 # ?a friends? bots or something.  If 'relay:tx' and 'relay:rx' are both set to
@@ -287,7 +292,7 @@ set mc_bw(relay:rx) 1
 set mc_bw(relay:key) "BlaBlaBlaBla"
 
 # [0=no/1=yes] Do you want to use regular expression matching rather than
-# glob-style wildcarded matching?
+# glob-style wild carded matching?
 # Note:
 #   o Warning, regular expressions are advanced.  If you don't know how to use
 #     regular expressions then do not turn this on.  If you want to learn
@@ -300,19 +305,22 @@ set mc_bw(use:regexp) 0
 set mc_bw(database) ".badwords.dat"
 
 
-## MC SVS (Script Version Service) v2.2 ##
-# Do you want the bot to connection to MC_8's SVS server to see if there's a
-# newer version of this module available?  It will only tell you, it's up to you
-# to get the newest version and compile it.
-#   0 = No, do not enable SVS.
-#   1 = Yes, but only inform me of non beta versions.
-#   2 = Yes, inform me of all new versions (beta and stable).
-set mc_bw(svs:mode) 2
+## SVS Client (Script Version Service) v3.0.1 ##
+# Once a day, the SVS Client will connect to MC_8's SVS Server to determine if there
+# is a newer version of this script available.  This will only notify users of the ne
+# version via a note.  It's up to the owner of the bot to download, adjust settings
+# then install the script.
 
-# Upon finding a newer version, whom do you want to notify?  The notification is
-# sent via 'note'.  Separate each user with a space.  For those whom know TCL;
-# do not put this in list format, keep it in string format.
+# If a newer version is found, whom do you want to notify?  The notification is sent
+# via a note.  Seperate each user with a space, or set this to "" to disable SVS
+# notification.  For those whom know TCL; do not put this in list format, keep it in
+# string format.
 set mc_bw(svs:notify) "MC_8"
+
+# Would you like to restrict the concept of a new version to stable releases only?
+#   0 = No, inform of both stable and beta release versions.
+#   1 = Yes, inform of only stable release versions.
+set mc_bw(svs:mode) 0
 
 
 ##
@@ -324,12 +332,12 @@ set mc_bw(svs:notify) "MC_8"
 #Script:mc_bw
 
 set mc_bw(script)      "Bad Words"
-set mc_bw(version)     "v4.0.3"
+set mc_bw(version)     "v4.1"
 set mc_bw(svs:script)  "badwerds"
-set mc_bw(svs:version) "004000003000"
-set mc_bw(svs:server)  "mc.purehype.net"
+set mc_bw(svs:version) "004001000000"
+set mc_bw(svs:server)  "mc.svs.purehype.net"
 set mc_bw(svs:port)    "81"
-set mc_bw(svs:get)     "/svs_client_interface.tcl"
+set mc_bw(svs:get)     "/index.tcl"
 set mc_bw(svs:query)   "svs=$mc_bw(svs:script)&version=$mc_bw(svs:version)"
 
 catch {unset temp}
@@ -372,31 +380,28 @@ if {![info exists mc_bw(svs:check)]} {set mc_bw(svs:check) 3}
 if {![info exists mc_bw(svs:notify)]} {set mc_bw(svs:notify) $owner}
 if {![info exists mc_bw(svs:stableonly)]} {set mc_bw(svs:stableonly) 0}
 
-# Error system, v2.1
-proc mc:bw:error {bindproc error {arg ""}} {
-	global mc_bw version lastbind
+# Error system, v3.0
+proc mc:bw:error {command error arg} {
+	global mc_bw version lastbind errorInfo
 	putlog "Error in script $mc_bw(script) $mc_bw(version)."
-	if {[info exists lastbind]} {set temp(x) $lastbind} \
-	else {set temp(x) -NULL-}
-	putlog "       Last bind: $temp(x)"
-	putlog "       Procedure: $bindproc"
-	putlog "            Args: $arg"
-	if {[info exists version]} {set temp(x) $version} \
-	else {set temp(x) -NULL-}
-	putlog " Eggdrop version: $temp(x)"
-	putlog "     TCL version: [info tclversion]"
+	putlog "    Error System: v3.0"
+	putlog "       Last Bind: [expr {[info exists lastbind] ? $lastbind : "-NULL-"}]"
+	putlog "         Command: $command"
+	putlog "       Arguments: $arg"
+	putlog "       Error Msg: $error"
+	putlog "    Egg. Version: [expr {[info exists version] ? $version : "-NULL-"}]"
+	putlog "     TCL Version: [info tclversion]"
 	putlog "  TCL Patchlevel: [info patchlevel]"
-	putlog "*** Please tell MC_8 about this BUG!  Visit        "
-	putlog "*** http://mc.purehype.net:81/bugzilla/ to do so.  "
-	putlog "*** Please include the next line in the bug report."
-	error $error
+	putlog "*** Please submit this bug so MC_8 can fix it.  Visit"
+	putlog "*** http://mc.purehype.net:81/bugzilla/ to properly report the bug."
+	putlog "*** Please include ALL info. in the bug report, including the next(s)."
+	error $errorInfo
 }
 
 proc mc:bw:errchk {command arg} {
-	if {[catch {eval $command $arg} return]} {
-		mc:bw:error $command $return $arg
-		return 0
-	}; return $return
+	if {![catch {eval $command $arg} return]} {return $return}
+	mc:bw:error $command $return $arg
+	return 0
 }
 # ^
 
@@ -424,15 +429,15 @@ proc *mc:bw:dcc:+badword_ {hand idx arg} {
 		putdcc $idx "$mc_bw(script): Syntax should be\; $temp(syntax)"
 		return 0
 	}
-	set temp [mc:bw:inter:examin $arg $idx $hand +]
-	set chan [lindex $temp 0]
+	set temp() [mc:bw:inter:examin $arg $idx $hand +]
+	set chan [lindex $temp() 0]
 	if {($chan == "&default") || ($chan == "all")} {set chan "&global"}
-	set string [lindex $temp 1]
-	set has_access [lindex $temp 2]
-	set access [lindex $temp 3]
-	set message [lindex $temp 4]
-	set warnings [lindex $temp 5]
-	set expire [lindex $temp 6]
+	set string [lindex $temp() 1]
+	set has_access [lindex $temp() 2]
+	set access [lindex $temp() 3]
+	set message [lindex $temp() 4]
+	set warnings [lindex $temp() 5]
+	set expire [lindex $temp() 6]
 	while {[regexp -- \\*\\* $string]} {regsub -all -- \\*\\* $string * string}
 	if {([string index $chan 0] != "&") && (![validchan $chan])} {
 		putcmdlog "#$hand# Denied (invalid channel): +badwords $arg"
@@ -552,8 +557,8 @@ proc mc:bw:control:+badword {idx arg} {
 			append mc_bw($idx:arg) " $arg"
 			putdcc $idx ""
 			putdcc $idx "Performing: .+badword $mc_bw($idx:arg)"
-			set temp(1) "*mc:bw:dcc:+badword [idx2hand $idx] $idx $mc_bw($idx:arg)"
-			if {[catch {$temp(1)} error]} {putdcc $idx "Error: $error"}
+			set temp(1) [list *mc:bw:dcc:+badword [idx2hand $idx] $idx $mc_bw($idx:arg)]
+			if {[catch {eval $temp(1)} error]} {putdcc $idx "Error: $error"}
 			unset mc_bw($idx:arg)
 			unset mc_bw($idx:switch)
 			putdcc $idx ""
@@ -593,13 +598,13 @@ proc *mc:bw:dcc:+exemptword_ {hand idx arg} {
 		putdcc $idx "$mc_bw(script): Syntax should be\; $temp(syntax)"
 		return 0
 	}
-	set temp [mc:bw:inter:examin $arg $idx $hand +]
-	set chan [lindex $temp 0]
+	set temp() [mc:bw:inter:examin $arg $idx $hand +]
+	set chan [lindex $temp() 0]
 	if {($chan == "&default") || ($chan == "all")} {set chan "&global"}
-	set string [lindex $temp 1]
-	set has_access [lindex $temp 2]
-	set access [lindex $temp 3]
-	set expire [lindex $temp 6]
+	set string [lindex $temp() 1]
+	set has_access [lindex $temp() 2]
+	set access [lindex $temp() 3]
+	set expire [lindex $temp() 6]
 	while {[regexp -- \\*\\* $string]} {regsub -all -- \\*\\* $string * string}
 	if {([string index $chan 0] != "&") && ![validchan $chan]} {
 		putcmdlog "#$hand# Denied (invalid channel): +exemptwords $arg"
@@ -691,8 +696,8 @@ proc mc:bw:control:+exemptword {idx arg} {
 			lappend mc_bw($idx:arg) "%[mc:bw:inter:exp2exp $arg]"
 			putdcc $idx ""
 			putdcc $idx "Performing: .+badword $mc_bw($idx:arg)"
-			set temp(1) "*mc:bw:dcc:+exemptword [idx2hand $idx] $idx $mc_bw($idx:arg)"
-			if {[catch {$temp(1)} error]} {putdcc $idx "Error: $error"}
+			set temp(1) [list *mc:bw:dcc:+exemptword [idx2hand $idx] $idx $mc_bw($idx:arg)]
+			if {[catch {eval $temp(1)} error]} {putdcc $idx "Error: $error"}
 			unset mc_bw($idx:arg)
 			unset mc_bw($idx:switch)
 			putdcc $idx ""
@@ -715,12 +720,12 @@ proc *mc:bw:dcc:-badword {hand idx arg} {
 }
 proc *mc:bw:dcc:-badword_ {hand idx arg} {
 	global mc_bw
-	set temp [mc:bw:inter:examin $arg $idx $hand -]
-	set chan [lindex $temp 0]
+	set temp() [mc:bw:inter:examin $arg $idx $hand -]
+	set chan [lindex $temp() 0]
 	if {($chan == "&default") || ($chan == "all")} {set chan "&global"}
-	set string [lindex $temp 1]
-	set has_access [lindex $temp 2]
-	set access [lindex $temp 3]
+	set string [lindex $temp() 1]
+	set has_access [lindex $temp() 2]
+	set access [lindex $temp() 3]
 	if {!$has_access} {
 		putcmdlog "#$hand# Denied (no access): -badwords $arg"
 		putdcc $idx "$mc_bw(script): Access denied: '$access' is required."
@@ -753,12 +758,12 @@ proc *mc:bw:dcc:-exemptword {hand idx arg} {
 }
 proc *mc:bw:dcc:-exemptword_ {hand idx arg} {
 	global mc_bw
-	set temp [mc:bw:inter:examin $arg $idx $hand -]
-	set chan [lindex $temp 0]
+	set temp() [mc:bw:inter:examin $arg $idx $hand -]
+	set chan [lindex $temp() 0]
 	if {($chan == "&default") || ($chan == "all")} {set chan "&global"}
-	set string [lindex $temp 1]
-	set has_access [lindex $temp 2]
-	set access [lindex $temp 3]
+	set string [lindex $temp() 1]
+	set has_access [lindex $temp() 2]
+	set access [lindex $temp() 3]
 	if {!$has_access} {
 		putcmdlog "#$hand# Denied (no access): -exemptwords $arg"
 		putdcc $idx "$mc_bw(script): Access denied: '$access' is required."
@@ -796,11 +801,11 @@ proc *mc:bw:dcc:badword_ {hand idx arg} {
 		putdcc $idx "$mc_bw(script): Syntax, should be\; $temp(syntax)"
 		return 0
 	}
-	set temp [mc:bw:inter:examin $arg $idx $hand 0]
-	set chan [lindex $temp 0]
+	set temp() [mc:bw:inter:examin $arg $idx $hand 0]
+	set chan [lindex $temp() 0]
 	if {$chan == "&default"} {set chan "all"}
-	set has_access [lindex $temp 2]
-	set access [lindex $temp 3]
+	set has_access [lindex $temp() 2]
+	set access [lindex $temp() 3]
 	if {!$has_access} {
 		putcmdlog "#$hand# Denied (no access): badwords $chan"
 		putdcc $idx "$mc_bw(script): Access denied: '$access' is required."
@@ -848,11 +853,11 @@ proc *mc:bw:dcc:exemptword_ {hand idx arg} {
 		putdcc $idx "$mc_bw(script): Syntax, should be\; $temp(syntax)"
 		return 0
 	}
-	set temp [mc:bw:inter:examin $arg $idx $hand 0]
-	set chan [lindex $temp 0]
+	set temp() [mc:bw:inter:examin $arg $idx $hand 0]
+	set chan [lindex $temp() 0]
 	if {$chan == "&default"} {set chan "all"}
-	set has_access [lindex $temp 2]
-	set access [lindex $temp 3]
+	set has_access [lindex $temp() 2]
+	set access [lindex $temp() 3]
 	if {!$has_access} {
 		putcmdlog "#$hand# Denied (no access): exemptwords $chan"
 		putdcc $idx "$mc_bw(script): Access denied: '$access' is required."
@@ -950,7 +955,7 @@ proc mc:bw:bw_ {nick uhost hand chan arg type} {
 		  (![validchan $chan] &&
 		   (($mc_bw(exempt:flag) != "") && [matchattr $hand $mc_bw(exempt:flag)])
 	    )} {return 0}
-	if {$mc_bw(strip)} {set arg [mc:bw:strip:all $arg]}
+	if {$mc_bw(strip)} {set arg [mc:bw:mirc_strip -all -- $arg]}
 	if {[isbotnick $chan]} {set chan "&message"}
 	if {([mc:bw:inter:list match &global . $arg . . . . . -exempt] != "") ||
 	    ([mc:bw:inter:list match $chan . $arg . . . . . -exempt] != "")} {
@@ -970,9 +975,9 @@ proc mc:bw:bw_ {nick uhost hand chan arg type} {
 	set l_ex [lindex $line 7] ;# Expires
 	set l_lu [lindex $line 8] ;# Last used
 	set host [lindex [split $uhost @] end]
-	if {$chan == "&message"} {set temp "private $type"} else {set temp $chan}
+	if {$chan == "&message"} {set temp() "private $type"} else {set temp() $chan}
 	set message [mc:bw:replace $l_ms [list %method  $type \
-	                                       %channel $temp \
+	                                       %channel $temp() \
 	                                       %string  $l_st \
 	                                       %add     $l_ad]]
 	set action ""
@@ -1002,10 +1007,10 @@ proc mc:bw:bw_ {nick uhost hand chan arg type} {
 				puthelp "PRIVMSG $channel :$message"
 			}
 			if {($mc_bw(warn_mode) != "") && [botisop $channel]} {
-				set temp [mc:bw:replace $mc_bw(warn_mode) [list %botnick $botnick \
+				set temp() [mc:bw:replace $mc_bw(warn_mode) [list %botnick $botnick \
 				                                                %nick    $nick]]
-				putserv "MODE $channel $temp"
-				lappend action "mode changed attempt ($channel $temp)"
+				putserv "MODE $channel $temp()"
+				lappend action "mode changed attempt ($channel $temp())"
 			}
 			if {$mc_bw(warn_kick)} {
 				if {![isop $botnick $channel] && ($chan == "&message") &&
@@ -1023,7 +1028,7 @@ proc mc:bw:bw_ {nick uhost hand chan arg type} {
 		set temp_1 "$nick was caught saying '$l_st' $x."
 		putlog "$mc_bw(script): $temp_1  Action taken: [join $action ", "]"
 	}	else {
-		set banmask [mc:bw:inter:masktype $nick!$uhost $mc_bw(banmask)]
+		set banmask [mc:bw:maskhostbytype $nick!$uhost $mc_bw(banmask)]
 		set global [string match @* $mc_bw(bantime)]
 		if {[string match *! $mc_bw(bantime)]} {
 			set option sticky
@@ -1042,17 +1047,17 @@ proc mc:bw:bw_ {nick uhost hand chan arg type} {
 		if {$global || ($chan == "&message")} {
 			foreach channel [channels] {
 				if {![botisop $channel] && ($chan == "&message") && $mc_bw(relay:tx)} {
-					set temp ""
+					set temp() ""
 					if {$ban_time != "-1"} {
 						set temp_1 [list $mc_bw(relay:key) BAN $channel	$banmask]
 						set temp_2 [encrypt $mc_bw(relay:key)+${botnet-nick} $temp_1]
 						putallbots "badwords [list k $temp_2]"
-						set temp " and ban"
+						set temp() " and ban"
 					}
 					set temp_1 [list $mc_bw(relay:key) KICK $channel $nick $message]
 					set temp_2 [encrypt $mc_bw(relay:key)+${botnet-nick} $temp_1]
 					putallbots "badwords [list k $temp_2]"
-					lappend action "relay kick$temp request (not op'd in $channel)"
+					lappend action "relay kick$temp() request (not op'd in $channel)"
 				} else {
 					set x 0
 					if {([mc:bw:inter:findchanuser $banmask $channel] != "") &&
@@ -1075,9 +1080,9 @@ proc mc:bw:bw_ {nick uhost hand chan arg type} {
 			}
 			if {$ban_time > "0"} {
 				newban $banmask $l_ad $message $ban_time $option
-				if {$option == "none"} {set temp ""} else {set temp " sticky"}
+				if {$option == "none"} {set temp() ""} else {set temp() " sticky"}
 				set temp_1 "(Duration: $duration)"
-				lappend action "added global$temp ban in bots banlist $temp_1"
+				lappend action "added global$temp() ban in bots banlist $temp_1"
 			}
 		} else {
 			set x 0
@@ -1099,9 +1104,9 @@ proc mc:bw:bw_ {nick uhost hand chan arg type} {
 			}
 			if {$ban_time > "0"} {
 				newchanban $chan $banmask $l_ad $message $ban_time $option
-				if {$option == "none"} {set temp ""} else {set temp " sticky"}
+				if {$option == "none"} {set temp() ""} else {set temp() " sticky"}
 				set temp_1 "(Duration: $duration)"
-				lappend action "added $chan$temp channel ban in bots banlist $temp_1"
+				lappend action "added $chan$temp() channel ban in bots banlist $temp_1"
 			}
 		}
 		if {$chan == "&message"} {set x "to me"} else {set x "in $chan"}
@@ -1235,7 +1240,8 @@ proc mc:bw:inter:share {command {arg {}}} {
 			if {$access} {putbot $_bot "[list badwords n share load] $arg"}
 		}; return
 	}
-	if {[string index $chan 0] != "#"} {set userlist [userlist b$mc_bw(share:flag)|]} elseif {[validchan $chan]} {
+	if {[string index $chan 0] != "#"} {set userlist [userlist b$mc_bw(share:flag)|]} \
+	elseif {[validchan $chan]} {
 		set userlist [userlist b$mc_bw(share:flag)|$mc_bw(share:flag) $chan]
 	} else {set userlist ""}
 	foreach bot $userlist {
@@ -1247,23 +1253,30 @@ proc mc:bw:inter:share {command {arg {}}} {
 # {-(bad|exempt) time_added channel string message added_by warnings expire lastused}
 proc mc:bw:inter:list {cmd {chan {}} {string {}} {text {}} {hand {}} \
                        {warnings {}} {expire {}} {lu {}} {q {}} {type {}}} {
-	return [mc:bw:errchk mc:bw:inter:list_ [list $cmd $chan $string $text $hand
-		$warnings $expire $lu $q $type]]
+	set temp(buffer) [list $cmd $chan $string $text $hand	$warnings $expire $lu $q]
+	lappend temp(buffer) $type
+	return [mc:bw:errchk mc:bw:inter:list_ $temp(buffer)]
 }
 proc mc:bw:inter:list_ {cmd chan string text hand warnings expire lu q type} {
 	global mc_bw {botnet-nick}
 	set chan [string tolower $chan]
 	if {![info exists mc_bw(list)]} {set mc_bw(list) ""}
+	if {[info tclversion] > 8.0} {
+		foreach temp() [list cmd chan string text hand warnings expire lu q type] {
+			set $temp() [encoding convertto [encoding system] [set $temp()]]
+		}
+	}
 	switch -- $cmd {
 		add {
 			if {[mc:bw:inter:list exists $chan $string . . . . . . $type]} {return 0}
-			lappend mc_bw(list) [list $type [clock seconds] $chan $string \
-				[string range $text 0 299] $hand $warnings $expire 0]
+			lappend mc_bw(list) \
+				[list $type [clock seconds] $chan $string [string range $text 0 299] $hand \
+				$warnings $expire 0]
 			mc:bw:inter:list save -quiet
 			mc:bw:inter:list expire . . . . . . . . $type
 			if {$q != "NO"} {
-				mc:bw:inter:share add [list $type $chan $string $text $hand $warnings \
-					$expire 0]
+				mc:bw:inter:share add \
+					[list $type $chan $string $text $hand $warnings $expire 0]
 			}; return 1
 		}
 		exists {
@@ -1333,7 +1346,7 @@ proc mc:bw:inter:list_ {cmd chan string text hand warnings expire lu q type} {
 				switch -- $db_ver {
 					"#v2:"  { set temp(line) "-bad $line"              }
 					"#v3:"  { set temp(line) $line                     }
-					default { set temp(line) "-bad $line "" * 0 0 0 0" }
+					default { set temp(line) "-bad $line {} * 0 0 0 0" }
 				}
 				set ty [lindex $temp(line) 0] ;# Type
 				set ta [lindex $temp(line) 1] ;# Time added
@@ -1354,8 +1367,11 @@ proc mc:bw:inter:list_ {cmd chan string text hand warnings expire lu q type} {
 					continue
 				}
 				# ^
-
-				lappend mc_bw(list) $temp(line)
+				if {[info tclversion] > 8.0} {
+					lappend mc_bw(list) [encoding convertto [encoding system] $temp(line)]
+				} else {
+					lappend mc_bw(list) $temp(line)
+				}
 				mc:bw:inter:share load:$chan [list $ty $ch $st $ms $ad $wn $ex $lu]
 			}
 			close $io
@@ -1399,12 +1415,15 @@ proc mc:bw:inter:list_ {cmd chan string text hand warnings expire lu q type} {
 			return 1
 		}
 		save {
-			if {$chan != "-quiet"} {putloglev o * "Writing badwords file..."}
-			if {![file exists $mc_bw(database)]} {close [open $mc_bw(database) w]}
+			if {$chan != "-quiet"} {putloglev o * "Writing $mc_bw(script) file..."}
 			set io [open $mc_bw(database) w]
 			puts $io "#v3:$mc_bw(version):${botnet-nick}:[clock seconds]"
-			foreach line [mc:bw:inter:list list all . . . . . . . -bad] {puts $io $line}
-			foreach line [mc:bw:inter:list list all . . . . . . . -exempt] {puts $io $line}
+			foreach line [mc:bw:inter:list list all . . . . . . . -bad] {
+				puts $io $line
+			}
+			foreach line [mc:bw:inter:list list all . . . . . . . -exempt] {
+				puts $io $line
+			}
 			close $io
 			return 1
 		}
@@ -1460,13 +1479,13 @@ proc mc:bw:inter:ut2d {time} {
 proc mc:bw:inter:examin {arg idx hand ar} {
 	global mc_bw
 	set x 0
-	if {[string index [set temp [lindex $arg 0]] 0] == "#"} {
-		set chan [string tolower $temp]
+	if {[string index [set temp() [lindex $arg 0]] 0] == "#"} {
+		set chan [string tolower $temp()]
 		set x 1
-	} elseif {[string index [set temp [lindex $arg 0]] 0] == "&"} {
-		set temp [string tolower $temp]
-		if {($temp == "&message") || ($temp == "&global")} {
-			set chan $temp
+	} elseif {[string index [set temp() [lindex $arg 0]] 0] == "&"} {
+		set temp() [string tolower $temp()]
+		if {($temp() == "&message") || ($temp() == "&global")} {
+			set chan $temp()
 			set x 1
 		}
 	} elseif {[string tolower [lindex $arg 0]] == "all"} {
@@ -1493,12 +1512,12 @@ proc mc:bw:inter:examin {arg idx hand ar} {
 	} else {
 		set string [lindex $arg $x]
 		incr x
-		if {[string index [set temp [lindex $arg $x]] 0] == "#"} {
-		 set warnings [string range $temp 1 end]
+		if {[string index [set temp() [lindex $arg $x]] 0] == "#"} {
+		 set warnings [string range $temp() 1 end]
 		 incr x
 		} else {set warnings 0}
-		if {[string index [set temp [lindex $arg $x]] 0] == "%"} {
-			set expire [mc:bw:inter:exp2cs [string range $temp 1 end]]
+		if {[string index [set temp() [lindex $arg $x]] 0] == "%"} {
+			set expire [mc:bw:inter:exp2cs [string range $temp() 1 end]]
 			incr x
 		} else {set expire 0}
 		set message [lrange $arg $x end]
@@ -1559,76 +1578,262 @@ proc mc:bw:inter:findchanuser {hostmask channel} {
 	}; return $buffer
 }
 
-# v1.2  -- mc.moretools proc
-proc mc:bw:replace {text subs} {
-	if {![catch {string map -nocase $subs $text} output]} {return $output}
-	set temp(re_syntax) {([][\\\*\+\?\{\}\,\(\)\:\.\^\$\=\!\|])}
-	foreach {a b} $subs {
-		regsub -all -- $temp(re_syntax) $a {\\\1} a
-		regsub -all -- $a $text $b text
+
+## More Tools quick procs.
+## -- http://mc.purehype.net:81/script_info.tcl?script=moretools
+
+# badargs <args> <min_llength> <max_llength|end> <argNames>
+#     version:
+#       v1.0
+proc mc:bw:badargs {{args ""}} {
+	if {[llength $args] < 4} {
+		error {
+			wrong # args: should be "mc:bw:badargs args min_llength max_llength argNames"
+		}
+	}
+
+	set index 0
+	foreach varName [list args min max names] {
+		set check_$varName [lindex $args $index]
+		incr index
+	}
+
+	if {[regexp -- {([^0-9])} $check_min -> bad]} {
+		error "bad number \"$bad\" in: $check_min"
+	}
+	if {[regexp -- {([^0-9])} $check_max -> bad] && ($check_max != "end")} {
+		error "bad number \"$bad\" in: $check_max"
+	}
+
+	# Make sure $check_args is in list format, if not then make it so.
+	# Were not going to use 2list here, don't want to evoke a 'too many nested calls
+	# to Tcl_EvalObj' error since '2list' uses on this proc.
+	if {[catch {llength $check_args} llength]} {
+		set check_args [split $check_args]
+		set llength $check_args
+	}
+
+	if {($llength < $check_min) || (($llength != "end") && ($llength > $check_max))} {
+		if {[info level] == "1"} {return 1}
+		error "wrong # args: should be \"[lindex [info level -1] 0] $check_names\""
+	}; return 0
+}
+
+# mc:bw:unlist <argsList> [varName1] [varName2] ... [varNameN]
+#     version:
+#       v1.0
+proc mc:bw:unlist {{args ""}} {
+	mc:bw:badargs $args 1 end "argsList ?varName varName ...?"
+	set argList [lindex $args 0]
+	set argList [expr {([catch {llength $argList}])?[split $argList]:$argList}]
+	set argNames [lrange $args 1 end]
+	if {![llength $argNames]} {
+		return [expr {(![catch {llength $argList}])?
+			[join $argList]:$argList}]
+	}
+	for {set index 0} {$index < [llength $argNames]} {incr index 1} {
+		set argName     [lindex $argNames $index]
+		set argListItem [lindex $argList  $index]
+
+		set argName_ [expr {([catch {llength $argName}])?[split $argName]:$argName}]
+		set setTo   [lindex $argName_ 1]
+		set argName [lindex $argName_ 0]
+
+		if {$argName == ""} {continue}
+
+		upvar 1 $argName var
+
+		if {[expr $index+1] > [llength $argList]} {
+			if {[llength $argName_] == "2"} {set var $setTo}
+		} else {
+			if {$argName == "args"} {
+				set var [lrange $argList $index end]
+				incr index [expr [llength $var]-1]
+			} else {set var $argListItem}
+		}
+	}; return $index
+}
+
+# 2list <text>
+#     version:
+#       v1.0
+proc mc:bw:2list {{args ""}} {
+	mc:bw:badargs $args 1 1 "text"
+	mc:bw:unlist $args text
+
+	return [expr {([catch {llength $text}])?[split $text]:$text}]
+}
+
+# mc:bw:replace [switches] <text> <substitutions>
+#     version:
+#       v1.3
+proc mc:bw:replace {{args ""}} {
+	mc:bw:badargs $args 2 4 "?switches? text substitutions"
+	set switches ""
+	for {set i 0} {[string match -* [set arg [lindex $args $i]]]} {incr i} {
+		if {![regexp -- {^-(nocase|-)$} $arg -> switch]} {
+			error "bad switch \"$arg\": must be -nocase, or --"
+		}
+		if {$switch == "-"} {
+			incr i
+			break
+		}; lappend switches $switch
+	}
+	set nocase [expr {([lsearch -exact $switches "nocase"] >= "0") ? 1 : 0}]
+	set text [lindex $args $i]
+	set substitutions [lindex $args [expr $i+1]]
+	mc:bw:badargs [lrange $args $i end] 2 2 "?switches? text substitutions"
+
+	# Check to see if $substitutions is in list format, if not make it so.
+	set substitutions [mc:bw:2list $substitutions]
+
+	if {[info tclversion] >= "8.1"} {
+		return [expr {($nocase)?
+			[string map -nocase $substitutions $text]:
+			[string map $substitutions $text]}]
+	}
+
+	set re_syntax {([][\\\*\+\?\{\}\,\(\)\:\.\^\$\=\!\|])}
+	foreach {a b} $substitutions {
+		regsub -all -- $re_syntax $a {\\\1} a
+		if {$nocase} {regsub -all -nocase -- $a $text $b text} \
+		else {regsub -all -- $a $text $b text}
 	}; return $text
 }
 
-# v1.1  -- mc.moretools proc
-proc mc:bw:strip:all {text} {
-	regsub -all -- {\002} $text "" text ;#bold
-	regsub -all -- {\003([0-9][0-9]?(,[0-9][0-9]?)?)?} $text "" text ;#color
-	regsub -all -- {\017} $text "" text ;#normal
-	regsub -all -- {\026} $text "" text ;#reverse
-	regsub -all -- {\037} $text "" text ;#underline
-	return $text
+# mirc_strip [switches] <text>
+#     version:
+#       v1.0
+proc mc:bw:mirc_strip {{args ""}} {
+	mc:bw:badargs $args 1 7 "?switches? text"
+	set switches ""
+	for {set i 0} {[string match -* [set arg [lindex $args $i]]]} {incr i} {
+		if {![regexp -- {^-(all|bold|color|reverse|underline|-)$} $arg -> switch]} {
+			set valid "-all -bold -color -reverse -underline {or --}"
+			error "bad switch \"$arg\": must be [join $valid ", "]"
+		}
+		if {$switch == "-"} {
+			incr i
+			break
+		}; lappend switches $switch
+	}
+	if {$switches == ""} {set switches all}
+	set arg [lindex $args $i]
+	mc:bw:badargs [lrange $args $i end] 1 1 "?switches? text"
+
+	set all [expr {([lsearch -exact $switches all] >= 0) ? 1 : 0}]
+	set list ""
+	if {$all} {
+		set list [list \002 "" \017 "" \026 "" \037 ""]
+	} else {
+		if {[lsearch -exact $switches bold] >= 0} {lappend list [list \002 ""]}
+		if {[lsearch -exact $switches plain] >= 0} {lappend list [list \017 ""]}
+		if {[lsearch -exact $switches reverse] >= 0} {lappend list [list \026 ""]}
+		if {[lsearch -exact $switches underline] >= 0} {lappend list [list \037 ""]}
+	}
+	if {$all || ([lsearch -exact $switches color] >= 0)} {
+		regsub -all -- "\003(\[0-9\]\[0-9\]?(,\[0-9\]\[0-9\]?)?)?" $arg "" arg
+	}
+	set arg [mc:bw:replace -- $arg [join $list]]
+
+	return $arg
 }
 
-# v3.0  -- mc.moretools proc
-proc mc:bw:chanflag {channel flag} {
-	if {![catch {channel get $channel $flag} catch]} {return $catch}
-	set temp(1) [string tolower [channel info $channel]]
-	if {[lsearch -exact $temp(1) +[string tolower $flag]] >= "0"} {return 1}
+# chanflag <channel> <flag>
+#     version:
+#       v3.1
+proc mc:bw:chanflag {{args ""}} {
+	mc:bw:badargs $args 2 2 "channel flag"
+	mc:bw:unlist $args channel flag
+
+	if {![validchan $channel]} {error "no such channel record"}
+
+	# Try the 'channel' commands' 'get' option first, it's faster since it is written
+	# in C by the eggdrop development team.
+	if {![catch {channel get $channel $flag} output]} {return $output}
+
+	set temp(chaninfo) [string tolower [channel info $channel]]
+	if {[lsearch -exact $temp(chaninfo) +[string tolower $flag]] >= "0"} {return 1}
 	return 0
 }
 
-# v1.3  -- mc.moretools proc
-proc mc:bw:inter:masktype {nuhost type} {
+# maskhostbytype <nick!ident@host.domain> [type]
+#     version:
+#       v2.0
+proc mc:bw:maskhostbytype {{args ""}} {
+	mc:bw:badargs $args 1 2 "nick!ident@host.domain ?type?"
+	mc:bw:unlist $args nuhost type
+
+
+	set type [expr {($type == "")?5:$type}]
+	if {![regexp -- {^1?[0-9]$} $type]} {
+		set valid "0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 {or 19}"
+		error "bad type \"$type\": must be [join $valid ", "]"
+	}
+
+	# Define the maximum length the ircd allows for an ident.  Standard is 9, however I
+	# made it to a variable incase someone wants to change it up.
 	set ident_max-length 9
+
+	# Define the maximum length the ircd allows for a hostname/ ip.  Standard is 63,
+	# however I made it to a variable incase someone wants to change it up.
 	set host_max-length 63
-	scan $nuhost {%[^!]!%s} nick uhost
-	set temp(split_uhost) [split $uhost @]
-	set temp(1) [expr [llength $temp(split_uhost)]-2]
-	set ident [join [lrange $temp(split_uhost) 0 $temp(1)] @]
-	set host [lindex $temp(split_uhost) end]
+
+	if {![regexp -- {^(.*?)!((.*)@(.*))$} $nuhost -> nick uhost ident host]} {
+		error "invalid nick!ident@host.domain: $nuhost"
+	}
+
 	set maskhost 1
-	if {[regexp -- {^1[0-9]$} $type]} {
-		set temp(w) {([0-9][0-9]?[0-9]?)}
-		set temp(x) "^$temp(w)\\.$temp(w)\\.$temp(w)\\.$temp(w)\$"
-		if {!(([regexp -- $temp(x) $host temp(1) a b c d]) &&
-		     ($a > 0 && $a <= 255 && $b <= 255 && $c <= 255 && $d <= 255))} {
+	if {[string length $type] == "2"} {
+		# Type must be 10-19.
+		if {[info tclversion] < "8.1"} {
+			set re_syntax_1 {([12][0-9][0-9]|[1-9][0-9]|[1-9])}
+			set re_syntax_2 {([12][0-9][0-9]|[1-9][0-9]|[0-9])}
+		} else {
+			set re_syntax_1 {([12]\d{2}|[1-9][0-9]|[1-9])}
+			set re_syntax_2 {([12]\d{2}|[1-9][0-9]|[0-9])}
+		}
+		set re_syntax ^$re_syntax_1\\.$re_syntax_2\\.$re_syntax_2\\.$re_syntax_2\$
+
+		if {![regexp -- $re_syntax $host]} {
 			regsub -all -- {[0-9]} $host ? host
 			set maskhost 0
-		}
-		set type [string index $type 1]
+		}; set type [string index $type 1]
 	}
-	if {[regexp -- {^[0-4]$} $type]} {set nick "*"}
-	if {[regexp -- {^[2479]$} $type]} {set ident "*"}
-	if {[regexp -- {^[1368]$} $type]} {regsub -- {^~?(.*)$} $ident *\\1 ident}
-	if {[regexp -- {^[3489]$} $type]} {
-		if {$maskhost} {set host [lindex [split [maskhost $host] @] end]}
+
+	# Previous version used regexp instead of these string matches.  String match in
+	# this case is ~3 microseconds faster.
+	if {[string match {[0-4]} $type]} {set nick *}
+	if {[string match {[2479]} $type]} {set ident *}
+	if {[string match {[1368]} $type]} {regsub -- {^~?(.*)$} $ident *\\1 ident}
+	if {[string match {[3489]} $type] && $maskhost} {
+		set host [lindex [split [maskhost $host] @] end]
 	}
-	if {[set cache(x) [string length $ident]] > ${ident_max-length}} {
-		set ident "*[string range $ident [expr $cache(x)-${ident_max-length}] end]"
+
+	if {[set length [string length $ident]] > ${ident_max-length}} {
+		set ident *[string range $ident [expr $length-${ident_max-length}] end]
 	}
-	if {[set cache(x) [string length $host]] > ${host_max-length}} {
-		set host "*[string range $host [expr $cache(x)-${host_max-length}] end]"
+	if {[set length [string length $host]] > ${host_max-length}} {
+		set host *[string range $host [expr $length-${host_max-length}] end]
 	}
-	return [format "%s!%s@%s" $nick $ident $host]
+
+	return $nick!$ident@$host
 }
+
+## End of More Tools quick procs.
+
 
 bind evnt - save mc:bw:evnt
 proc mc:bw:evnt {type} {return [mc:bw:errchk mc:bw:evnt_ [list $type]]}
 proc mc:bw:evnt_ {type} {mc:bw:inter:list save}; mc:bw:inter:list load -all
 
-## SVS v2.2
+
+## SVS v3.1
+set mc_bw(svs:client_version) "v3.1"
 if {![info exists mc_bw(svs:mode)] ||
-    ![regexp -- {^1|0$} $mc_bw(svs:mode)]} {set mc_bw(svs:mode) 2}
+    ![regexp -- {^(1|0)$} $mc_bw(svs:mode)]} {
+	set mc_bw(svs:mode) 0
+}
 if {![info exists mc_bw(svs:notify)]} {
 	if {![info exists owner]} {set owner ""}
 	set mc_bw(svs:notify) $owner
@@ -1637,26 +1842,77 @@ if {![info exists mc_bw(svs:notify)]} {
 bind time - "00 00 *" mc:bw:do_svs
 proc mc:bw:do_svs {{args ""}} {
 	global mc_bw
-	if {!$mc_bw(svs:mode)} {return 0}
+	mc:bw:do_svs_ $mc_bw(svs:server) $mc_bw(svs:port) $mc_bw(get)
+}
+
+proc mc:bw:do_svs_ {svs_server svs_port svs_get} {
+	global mc_bw tcl_platform
 	if {[catch {
-	        socket -async $mc_bw(svs:server) $mc_bw(svs:port)
+	        socket -async $svs_server $svs_port
 	           } sid]} {
 		putloglev d * "$mc_bw(script): SVS socket error: $sid"
 		return 1
 	}
+
+	# This block of code is to get a standard User-Agent line of information, as
+	# proposed in http://www.mozilla.org/build/revised-user-agent-strings.html
+	foreach array_name [list platform os osVersion machine] {
+		set temp($array_name) [lindex [array get tcl_platform $array_name] 1]
+	}
+	switch -- $temp(platform) {
+		windows {
+			switch -- $temp(os) {
+				Windows {set temp(2) Win$temp(osVersion)}
+				"Windows 95" {
+					if {$temp(osVersion) < "4.10"} {
+						set temp(2) Win95
+					} else {
+						set temp(2) Win98
+					}
+				}
+				"Windows 98" {set temp(2) Win98}
+				"Windows NT" {
+					if {$temp(osVersion) >= "5.0"} {
+						set temp(2) "Windows NT $temp(osVersion)"
+					} else {
+						set temp(2) WinNT$temp(osVersion)
+					}
+				}
+				default {
+					set temp(2) "$temp(os) $temp(osVersion)"
+				}
+			}
+		}
+		unix {
+			set temp(2) "unix $temp(machine)"
+		}
+		macintosh {
+			set temp(2) $temp(machine)
+		}
+		default {
+			set temp(2) "$temp(os) $temp(osVersion) $temp(machine)"
+		}
+	}
+	set temp(user_agent) "Mozilla/5.001 ($temp(platform); U; $temp(2); en) "
+	append temp(user_agent) "Gecko/25250101 $mc_bw(svs:script)/"
+	append temp(user_agent) "$mc_bw(svs:version) SVS_Client/"
+	append temp(user_agent) "$mc_bw(svs:client_version)"
+	# ^
+
 	fconfigure $sid -blocking 0 -buffering line
-	set tout [after 60000 "mc:bw:svs_talk $sid timeout"]
+	set tout [after 60000 "mc:bw:svs_talk $sid timeout $svs_server $svs_port"]
 	fileevent $sid readable "mc:bw:svs_talk $sid $tout"
-	puts $sid "GET $mc_bw(svs:get)?$mc_bw(svs:query) HTTP/1.0\
-	         \nHost: $mc_bw(svs:server):$mc_bw(svs:port)\n"
+	puts $sid "GET $svs_get?$mc_bw(svs:query) HTTP/1.0\
+	         \nHost: $svs_server:$svs_port\
+	         \nUser-Agent: $temp(user_agent)\n"
 	flush $sid
 }
 
-proc mc:bw:svs_talk {sid tout} {
+proc mc:bw:svs_talk {sid tout {svs_server ""} {svs_port ""}} {
 	global mc_bw
 	set array [list svs temp $sid]
 	if {$tout == "timeout"} {
-		set temp(1) "$mc_bw(svs:server):$mc_bw(svs:port)"
+		set temp(1) "$svs_server:$svs_port"
 		putloglev d * \
 			"$mc_bw(script): SVS Warning: Timed out connecting to $temp(1)."
 		catch {unset mc_bw($array)}
@@ -1678,14 +1934,21 @@ proc mc:bw:svs_talk {sid tout} {
 		return -2
 	}
 	switch -- [lindex $get 0] {
+		200 {
+			set temp(host) [lindex $get 1]
+			set temp(port) [lindex $get 2]
+			set temp(get) [lindex $get 3]
+			set temp(cache) "$temp(host) at $temp(port)"
+			putloglev d * "$mc_bw(script): SVS is being redirected to $temp(cache)."
+			mc:bw:do_svs_ $temp(host) $temp(port) $temp(get)
+			close $sid
+			return 200
+		}
 		003 {
 			set temp(reply) [lrange $get 1 end]
-			set temp(reply:0) [lindex $temp(reply) 0]
-			set temp(reply:1) [lindex $temp(reply) 1]
-			set temp(reply:2) [lindex $temp(reply) 2]
-			set temp(reply:3) [lindex $temp(reply) 3]
-			set temp(reply:4) [lindex $temp(reply) 4]
-			set temp(reply:5) [lindex $temp(reply) 5]
+			for {set number 0} {$number <= 5} {incr number} {
+				set temp(reply:$number) [lindex $temp(reply) $number]
+			}
 			if {$temp(reply:0) != $mc_bw(svs:script)} {
 				set temp(1) "wanted $mc_bw(svs:script), got $temp(reply:0)"
 				putloglev d * "$mc_bw(script): SVS Error: $temp(1)"
@@ -1693,7 +1956,7 @@ proc mc:bw:svs_talk {sid tout} {
 				close $sid
 				return -3
 			}
-			if {$mc_bw(svs:mode) == "1"} {
+			if {$mc_bw(svs:mode)} {
 				set temp(svs:version) [string range $mc_bw(svs:version) 0 8]999
 			} else {
 				set temp(svs:version) [string range $mc_bw(svs:version) 0 11]
@@ -1707,7 +1970,7 @@ proc mc:bw:svs_talk {sid tout} {
 				regsub -all -- %4 $temp(note) $temp(reply:4) temp(note)
 				regsub -all -- %version $temp(note) $mc_bw(version) temp(note)
 				foreach temp(to) [split $mc_bw(svs:notify) ",; "] {
-					if {$temp(to) == ""} {continue}
+					if {[string trim $temp(to)] == ""} {continue}
 					regsub -- %nick $temp(note) $temp(to) temp(note2)
 					set temp(lunotes) [notes $temp(to) -[notes $temp(to)]]]
 					if {[string match *$temp(note2)* $temp(lunotes)]} {
@@ -1745,11 +2008,51 @@ proc mc:bw:svs_talk {sid tout} {
 }
 ## ^
 
+
 putlog "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 
 ##
 # HISTORY  ( <Fixed by> - [Found by] - <Info> )
 ##
+# v4.1 (10.09.02)
+#  MC_8 -           - Upgraded SVS client.  v2.2 -> v3.1
+#  MC_8 - KrE80r    - Fixed 'invalid command name "encoding"'. [Bug: 161]
+#  MC_8 - heber     - Encoded ability to support for non ascii characters in channel
+#                     names, such as `ã`.
+#                     Bugzilla number: 152
+#  MC_8 - heber     - Fixed 'invalid command name "badargs"'.
+#                     Bugzilla number: 114
+#                     Bugzilla number: 150
+#  MC_8 - heber     - Fixed 'wrong # args: should be "*mc:bw:dcc:+badword hand idx
+#                     arg"'.
+#                     Bugzilla number: 146
+#  MC_8 - heber     - Fixed 'invalid command name "2list"', added `2list` tcl
+#                     command.  none -> v1.0
+#                     Bugzilla number: 146
+#  MC_8 - heber     - Fixed 'Error: invalid command name ...'.
+#                     Bugzilla bug: 143
+#  MC_8 - heber     - Fixed 'invalid command name "replace"'.
+#                     Bugzilla bug: 125
+#  MC_8 - heber     - Fixed 'missing close-brace: possible unbalanced brace in
+#                     comment'.
+#                     Bugzilla bug: 122
+#  MC_8 -           - Added `unlist` tcl command.  none -> v1.0
+#  MC_8 -           - Added `badargs` tcl command.  none -> v1.0
+#  MC_8 -           - Upgraded `replace` tcl command.  v1.2 -> v1.3
+#  MC_8 -           - Added new `mirc_strip`. none -> v1.0
+#  MC_8 -           - Removed old `strip:all` tcl command. v1.1 -> none
+#  MC_8 -           - Upgraded `chanflag` tcl command.  v3.0 -> v3.1
+#  MC_8 -           - Upgraded `inter:masktype` tcl command, renamed to
+#                     `maskhostbytype`.  v1.3 -> v2.0
+#  MC_8 -           - Upgraded Error Catching System.  v2.1 -> v3.0
+#  MC_8 - heber  \  - Fixed 'can't set "temp(syntax)": variable isn't array'.
+#         xentor \    Bugzilla bug: 119
+#         Javier
+#  MC_8 - tim     \ - Fixed 'invalid command name ""'.
+#         Francis \   Bugzilla number: 100
+#         Victor  \
+#         KrE80r
+#
 # v4.0.3 (07.09.02)
 #  MC_8 - tim - Fixed problem auto conversion of datafile v1.0 to v3.0.
 #               Bugzilla bug: 94
@@ -1775,8 +2078,8 @@ putlog "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 # v4.0.1 (06.19.02)
 #  MC_8 -         - Cleaned up the formatting and working of all comments before
 #                   coding.
-#  MC_8 -         - Rewrote 'mc:bw:bw_' proc, it was ugly and unformat'd.
-#  MC_8 -         - Fixed conversion of string->list format for channel veriable
+#  MC_8 -         - Rewrote 'mc:bw:bw_' proc, it was ugly and unformatted.
+#  MC_8 -         - Fixed conversion of string->list format for channel variable
 #                   within the mc:bw:bw_ proc.
 #  MC_8 -         - Removed settings 'exempt:op' and 'exempt:voice', don't know
 #                   why I have that there when I have channel specific
@@ -1799,15 +2102,15 @@ putlog "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 #  MC_8 - Alexander - Fixed '[mc:bw:bot]: can't read "key": no such variable'.
 #                     Bugzilla bug: 94
 #  MC_8 -           - Putting a 300 character restriction on badword reasons,
-#                     botnet communications only support up to 300 -- the exta
-#                     100 is for other informtion pertaning to that perticular
+#                     botnet communications only support up to 300 -- the extra
+#                     100 is for other information pertaining to that particular
 #                     badword entry.
 #  MC_8 -           - Script was using [join [lindex ...]], don't know why...
 #                     that's improper list usage and would cause bugs later on.
 #  MC_8 -           - Changed how the bot communicates over the botnet, now
 #                     encrypted.  Due to the totally different way this script
 #                     shares info over the botnet, I'm going to up this to
-#                     version 4.0, older version are not botnet compatable with
+#                     version 4.0, older version are not botnet comparable with
 #                     this new communication method.
 #  MC_8 -           - Bot wasn't communicating in proper list format over the
 #                     botnet.
@@ -1820,9 +2123,9 @@ putlog "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 #                         ident to 'test' and host to 'me@192.168.0.1'.
 #                       o Types *1,3,6,8 is support to remove the ident's first
 #                         ~.  It was removing all continues (from left) ~'s.
-#                       o A little more efficent, by cache'n some commands.
+#                       o A little more efficient, by cache'n some commands.
 #                     v1.1 -> v1.2
-#  MC_8 -           - Added the 'normal' character coad to 'strip:all' proc.
+#  MC_8 -           - Added the 'normal' character code to 'strip:all' proc.
 #                     old -> v1.1
 #                     Bugzilla bug: 71
 #  MC_8 - niklas    - Added information to 'Information' field.
@@ -1851,7 +2154,7 @@ putlog "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 #  MC_8 - Dr.W95 - Added use:regexp.
 #
 # v3.0.1 (10.30.01)
-#  MC_8 -              - Rewrote explination of ban masking types.
+#  MC_8 -              - Rewrote explanation of ban masking types.
 #  MC_8 -              - Rewrote the ban masking proc again, much smaller now.
 #  MC_8 -              - Ban types 10-19 were not masking the host.domain
 #                        correctly if it was an ip address.
@@ -1862,18 +2165,18 @@ putlog "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 #                        {^1[0-9]$} $type] &&', fixed.
 #  MC_8 -              - Added share:flag configuration option.
 #  MC_8 - Morpheus233/ - Fixed 'TCL error [mc:bw:pubm]: can't read "channel": no
-#         Daniel         such veriable'.
+#         Daniel         such variable'.
 #  MC_8 - Dr.W95       - Added warn_msgtype configuration option.
 #  MC_8 -              - Made minor changes to the SVS client section -- to give
-#                        proper error if an invalid user is specified to recieve
+#                        proper error if an invalid user is specified to receive
 #                        a notification of a newer version.
-#  MC_8 -              - Remove *inter:str proc, replaced with format's insted
+#  MC_8 -              - Remove *inter:str proc, replaced with format's instead
 #                        (more efficient).
 #  MC_8 -              - Rewrote the ban masking proc, it's quicker.
 #  MC_8 -              - Removed the findip proc.
 #
 # v3.0 (10.14.01)
-#  MC_8 -       - Added prompt interfact for +(bad|exempt)word.
+#  MC_8 -       - Added prompt interface for +(bad|exempt)word.
 #  MC_8 -       - Bots were flooding "U" on load via botnet link.
 #  MC_8 -       - Bot was getting flooded down with utimers.
 #  MC_8 -       - Entrie expire time wasn't working.
@@ -1883,7 +2186,7 @@ putlog "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 #  MC_8 -       - Added catches to not put a kick (nor ban) on the channel if
 #                 the user (or banmask) isn't on the channel, saves bandwidth
 #                 and also makes the listed 'Actions:' performed smaller.
-#  MC_8 - ckitt - Relay kick message has a prepending ':' that shouldn't be
+#  MC_8 - ckitt - Relay kick message has a pre pending ':' that shouldn't be
 #                 there.
 #  MC_8 - ckitt - Added ability to share badwords entries among the botnet.
 #  MC_8 -       - Since expire, last used, and warnings are now used per entry,
@@ -1894,20 +2197,20 @@ putlog "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 #  MC_8 -       - After exceeding warnings the bot was starting warning's over
 #                 again at 0, for the user -- fixed.
 #  MC_8 -       - Fixed `TCL error [mc:bw:???]: illegal channel: <bots irc
-#                 nick>`.  This error doesn't occure on undernet, was found on
+#                 nick>`.  This error doesn't occur on undernet, was found on
 #                 dalnet.
 #  MC_8 -       - If bantime was set to -1, it wasn't kicking as well.  Fixed.
-#  MC_8 -       - It is no longer manditory to quote the *bad*string* upon
+#  MC_8 -       - It is no longer mandatory to quote the *bad*string* upon
 #                 removal if it contains a space.
-#  MC_8 -       - It now gives a better explination of what actions were taken
+#  MC_8 -       - It now gives a better explanation of what actions were taken
 #                 upon catching a violator.
 #  MC_8 - ckitt - Added botnet relay features.
 #  MC_8 -       - Fixed special character handling for bad word strings.
 #  MC_8 -       - Change kickop and kickvoice to exemptop and exemptvoice.
 #  MC_8 - ckitt - Wasn't kicking after setting a ban for bad word match on
 #                 private (notice/ msg/ action)'s.
-#  MC_8 - ckitt - Further adjusted replacment veriable messages.
-#  MC_8 - ckitt - On &global and &message's, the %channel replacment veriable
+#  MC_8 - ckitt - Further adjusted replacement variable messages.
+#  MC_8 - ckitt - On &global and &message's, the %channel replacement variable
 #                 was looking like "%channelglobal".  Fixed.
 #  MC_8 - ckitt - The bot was kicking before banning -- I put kicks and bans on
 #                 the same queue (putserv).
@@ -1920,10 +2223,10 @@ putlog "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 #
 # v2.0 (06.27.01)
 #  MC_8 - Sara    - Added a few examples within the command syntax layout.
-#  MC_8 - ICU     - Fixed +/-badword dcc command requirment for the *bad*word*.
+#  MC_8 - ICU     - Fixed +/-badword dcc command requirement for the *bad*word*.
 #  MC_8 - Rami    - Fixed `Tcl error [mc:msgm:weed]: wrong # args: should be
 #                   "foreach varList list ?varList list ...? command"`.
-#  MC_8 - KatzEye - Added ability to have perm bans, insted of timed bans.
+#  MC_8 - KatzEye - Added ability to have perm bans, instead of timed bans.
 #  MC_8 - KatzEye - Added ability to have the ban's global or channel specific.
 #  MC_8 -         - Updated SVS to v1.2
 #  MC_8 -         - Made the badword strings settable via dcc (on the fly)
@@ -1946,8 +2249,8 @@ putlog "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 #
 # v1.9 (04.08.00)
 #  MC_8 - eggheads - Removed this script's dependency on moretools.
-#  MC_8 -          - Removed the requirment of having to "quote" searches
-#                    contaning spaces.
+#  MC_8 -          - Removed the requirement of having to "quote" searches
+#                    containing spaces.
 #
 # v1.8.2 (02-07-00)
 #  MC_8 - Speedo- - Fixed, 'set mc_time to -1 to turn off banning'.
@@ -1964,7 +2267,7 @@ putlog "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 #           text said to the rooms, witch would pull from global then channel
 #           bad werd list.
 #           example:  say your rule for #warez4free is "*join #*" and
-#                     #warez4warez is "*ratio*", and let's say user X in in
+#                     #warez4warez is "*ratio*", and let's say user X in
 #                     #warez4free and in #warez4warez and /msg's the bot with "
 #                     hey dude, join #blaboo " .. he will get booted from
 #                     #warez4free but not from #warez4warez.
@@ -1977,7 +2280,7 @@ putlog "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 #           taking the first if there was a space in the search.
 #
 # v1.6 (12-05-99)
-#  MC_8 -       - Added %match veriable to warning message and kick message.
+#  MC_8 -       - Added %match variable to warning message and kick message.
 #  MC_8 - Malik - If you had NO global defined (regardless of wether or not it
 #                 was empty) (in other words, you DELEATED global set) the whole
 #                 script ceased to work, no error messages what so ever.
