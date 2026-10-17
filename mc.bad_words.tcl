@@ -1,5 +1,5 @@
 ##
-# Bad Words v4.0.2
+# Bad Words v4.0.3
 #  by MC_8 - Carl M. Gregory <mc8@purehype.net>
 #  This script will only run on eggdrop 1.5.5 or greater.
 #
@@ -7,6 +7,8 @@
 # Have a bug?  http://mc.purehype.net:81/bugzilla/
 ##
 
+##
+# Description
 ##
 # This script will kick and ban anyone in a specified room that mentions a
 # certin word (wildcards accepted).
@@ -298,7 +300,7 @@ set mc_bw(use:regexp) 0
 set mc_bw(database) ".badwords.dat"
 
 
-## MC SVS (Script Version Service) v2.1 ##
+## MC SVS (Script Version Service) v2.2 ##
 # Do you want the bot to connection to MC_8's SVS server to see if there's a
 # newer version of this module available?  It will only tell you, it's up to you
 # to get the newest version and compile it.
@@ -313,18 +315,21 @@ set mc_bw(svs:mode) 2
 set mc_bw(svs:notify) "MC_8"
 
 
+##
 
-###
-## Coding below, do not proceed -- you are done with the settings.
-###
+##
+# Edit no further, tcl coding below.
+##
+
+#Script:mc_bw
 
 set mc_bw(script)      "Bad Words"
-set mc_bw(version)     "v4.0.2"
+set mc_bw(version)     "v4.0.3"
 set mc_bw(svs:script)  "badwerds"
-set mc_bw(svs:version) "004000002000"
+set mc_bw(svs:version) "004000003000"
 set mc_bw(svs:server)  "mc.purehype.net"
 set mc_bw(svs:port)    "81"
-set mc_bw(svs:get)     "/"
+set mc_bw(svs:get)     "/svs_client_interface.tcl"
 set mc_bw(svs:query)   "svs=$mc_bw(svs:script)&version=$mc_bw(svs:version)"
 
 catch {unset temp}
@@ -367,14 +372,18 @@ if {![info exists mc_bw(svs:check)]} {set mc_bw(svs:check) 3}
 if {![info exists mc_bw(svs:notify)]} {set mc_bw(svs:notify) $owner}
 if {![info exists mc_bw(svs:stableonly)]} {set mc_bw(svs:stableonly) 0}
 
-# Error system, v2.0
+# Error system, v2.1
 proc mc:bw:error {bindproc error {arg ""}} {
 	global mc_bw version lastbind
 	putlog "Error in script $mc_bw(script) $mc_bw(version)."
-	putlog "       Last bind: $lastbind"
+	if {[info exists lastbind]} {set temp(x) $lastbind} \
+	else {set temp(x) -NULL-}
+	putlog "       Last bind: $temp(x)"
 	putlog "       Procedure: $bindproc"
 	putlog "            Args: $arg"
-	putlog " Eggdrop version: $version"
+	if {[info exists version]} {set temp(x) $version} \
+	else {set temp(x) -NULL-}
+	putlog " Eggdrop version: $temp(x)"
 	putlog "     TCL version: [info tclversion]"
 	putlog "  TCL Patchlevel: [info patchlevel]"
 	putlog "*** Please tell MC_8 about this BUG!  Visit        "
@@ -384,454 +393,501 @@ proc mc:bw:error {bindproc error {arg ""}} {
 }
 
 proc mc:bw:errchk {command arg} {
- if {[catch {eval $command $arg} return]} {
-  mc:bw:error $command $return $arg; return 0
- }; return $return
+	if {[catch {eval $command $arg} return]} {
+		mc:bw:error $command $return $arg
+		return 0
+	}; return $return
 }
 # ^
 
 # +badword [[#channel|&message|&global] <*bad*string*> [#warnings] [%expire <XdXhXm>] <kick/warning message>]
 bind dcc - +badwords *mc:bw:dcc:+badword
 proc *mc:bw:dcc:+badword {hand idx arg} {
- return [mc:bw:errchk *mc:bw:dcc:+badword_ [list $hand $idx $arg]]
+	return [mc:bw:errchk *mc:bw:dcc:+badword_ [list $hand $idx $arg]]
 }
 proc *mc:bw:dcc:+badword_ {hand idx arg} {
- global mc_bw
- if {$arg == ""} {
-  control $idx mc:bw:control:+badword
-  putdcc $idx "$mc_bw(script), entering +badword prompt interface."
-  putdcc $idx "  To exit early: *bye*"
-  putdcc $idx "______________________________________________"
-  set mc_bw($idx:switch) 2
-  set mc_bw($idx:arg) ""
-  putdcc $idx ""
-  putdcc $idx "\[#channel|message|global\] What channel?"
-  return 0
- }
- if {[regexp -- {^-?(-h(elp)?|-\?|-s(yntax)?)$} $arg]} {
-  putdcc $idx "$mc_bw(script): Syntax should be\; +badword \[\[#channel|&message|&global\] <*bad*string*> \[#warnings\] \[%expire <XdXhXm>\] <kick/warning message>\]"
-  return 0
- }
- set temp [mc:bw:inter:examin $arg $idx $hand +]
- set chan [lindex $temp 0]
- if {($chan == "&default") || ($chan == "all")} {set chan "&global"}
- set string [lindex $temp 1]
- set has_access [lindex $temp 2]
- set access [lindex $temp 3]
- set message [lindex $temp 4]
- set warnings [lindex $temp 5]
- set expire [lindex $temp 6]
- while {[regexp -- \\*\\* $string]} {regsub -all -- \\*\\* $string * string}
- if {([string index $chan 0] != "&") && (![validchan $chan])} {
-  putcmdlog "#$hand# Denied (invalid channel): +badwords $arg"
-  putdcc $idx "$mc_bw(script): Invalid channel: $chan"
-  putdcc $idx "Syntax: +badword \[\[#channel|&message|&global\] <*bad*string*> \[#warnings\] \[%expire <XdXhXm>\] <kick/warning message>\]"
-  return 0
- }
- if {$message == ""} {
-  putcmdlog "#$hand# Denied (no message specified): +badwords $arg"
-  putdcc $idx "$mc_bw(script): No message specified."
-  putdcc $idx "Syntax: +badword \[\[#channel|&message|&global\] <*bad*string*> \[#warnings\] \[%expire <XdXhXm>\] <kick/warning message>\]"
-  return 0
- }
- if {!$has_access} {
-  putcmdlog "#$hand# Denied (no access): +badwords $arg"
-  putdcc $idx "$mc_bw(script):  Access denied:  '$access' is required."
-  return 0
- }
- if {![mc:bw:inter:list add $chan $string $message $hand $warnings $expire . . -bad]} {
-  putcmdlog "#$hand# Denied (already exists): +badwords $arg"
-  putdcc $idx "$mc_bw(script):  Access denied, entry already exists."
-  return 0
- }
- putcmdlog "#$hand# +badwords $arg"
- switch -- $chan {
-  &global {set x "the global"}
-  &message {set x "messages"}
-  default {set x "$chan's"}
- }
- putdcc $idx "$mc_bw(script):  Added '$string' (warn/kick msg: $message) to $x badwords list."
- return 0
+	global mc_bw
+	if {$arg == ""} {
+		control $idx mc:bw:control:+badword
+		putdcc $idx "$mc_bw(script), entering +badword prompt interface."
+		putdcc $idx "  To exit early: *bye*"
+		putdcc $idx "______________________________________________"
+		set mc_bw($idx:switch) 2
+		set mc_bw($idx:arg) ""
+		putdcc $idx ""
+		putdcc $idx "\[#channel|message|global\] What channel?"
+		return 0
+	}
+	if {[regexp -- {^-?(-h(elp)?|-\?|-s(yntax)?)$} $arg]} {
+		set temp(syntax) {+badword [[#channel|&message|&global] <*bad*string*> }
+		append temp(syntax) {[#warnings] [%expire<XdXhXm>] <kick/warning message>]}
+		putdcc $idx "$mc_bw(script): Syntax should be\; $temp(syntax)"
+		return 0
+	}
+	set temp [mc:bw:inter:examin $arg $idx $hand +]
+	set chan [lindex $temp 0]
+	if {($chan == "&default") || ($chan == "all")} {set chan "&global"}
+	set string [lindex $temp 1]
+	set has_access [lindex $temp 2]
+	set access [lindex $temp 3]
+	set message [lindex $temp 4]
+	set warnings [lindex $temp 5]
+	set expire [lindex $temp 6]
+	while {[regexp -- \\*\\* $string]} {regsub -all -- \\*\\* $string * string}
+	if {([string index $chan 0] != "&") && (![validchan $chan])} {
+		putcmdlog "#$hand# Denied (invalid channel): +badwords $arg"
+		putdcc $idx "$mc_bw(script): Invalid channel: $chan"
+		set temp(syntax) {+badword [[#channel|&message|&global] <*bad*string*> }
+		append temp(syntax) {[#warnings] [%expire<XdXhXm>] <kick/warning message>]}
+		putdcc $idx "Syntax: $temp(syntax)"
+		return 0
+	}
+	if {$message == ""} {
+		putcmdlog "#$hand# Denied (no message specified): +badwords $arg"
+		putdcc $idx "$mc_bw(script): No message specified."
+		set temp(syntax) {+badword [[#channel|&message|&global] <*bad*string*> }
+		append temp(syntax) {[#warnings] [%expire<XdXhXm>] <kick/warning message>]}
+		putdcc $idx "Syntax: $temp(syntax)"
+		return 0
+	}
+	if {!$has_access} {
+		putcmdlog "#$hand# Denied (no access): +badwords $arg"
+		putdcc $idx "$mc_bw(script):  Access denied:  '$access' is required."
+		return 0
+	}
+	if {![mc:bw:inter:list add $chan $string $message $hand $warnings $expire . . \
+	      -bad]} {
+		putcmdlog "#$hand# Denied (already exists): +badwords $arg"
+		putdcc $idx "$mc_bw(script): Access denied, entry already exists."
+		return 0
+	}
+	putcmdlog "#$hand# +badwords $arg"
+	switch -- $chan {
+		&global  {set x "the global"}
+		&message {set x "messages"  }
+		default  {set x "$chan's"   }
+	}
+	set temp(1) "Added '$string' (warn/kick msg: $message)"
+	putdcc $idx "$mc_bw(script): $temp(1) to $x badwords list."
+	return 0
 }
 
 proc mc:bw:control:+badword {idx arg} {
- global mc_bw
- if {$arg == "*bye*"} {
-  putdcc $idx ""
-  putdcc $idx "Exiting prompt interface."
-  catch {unset mc_bw($idx:arg)}
-  catch {unset mc_bw($idx:switch)}
-  return 1
- }
- switch -- $mc_bw($idx:switch) {
-  1 {
-   set mc_bw($idx:arg) ""
-   putdcc $idx ""
-   putdcc $idx "\[#channel|message|global\] What channel?"
-  }
-  2 {
-   if {$arg != "----redo:mc:bw:control"} {
-    if {[string index $arg 0] == "#"} {
-     if {![validchan $arg]} {
-      putdcc $idx "Invalid channel: $arg"
-      set mc_bw($idx:switch) 1
-      mc:bw:control:+badword $idx . ; return 0
-     }
-    } elseif {($arg != "global") && ($arg != "message")} {
-     putdcc $idx "Invalid channel option: $arg"
-     set mc_bw($idx:switch) 1
-     mc:bw:control:+badword $idx . ; return 0
-    }
-    if {[string index $arg 0] != "#"} {set arg &$arg}
-    lappend mc_bw($idx:arg) $arg
-   }
-   putdcc $idx ""
-   putdcc $idx "Enter your *bad*string*:"
-  }
-  3 {
-   if {$arg != "----redo:mc:bw:control"} {
-    if {$arg == ""} {
-     putdcc $idx "No *bad*string* entered."
-     set mc_bw($idx:switch) 2
-     mc:bw:control:+badword $idx ----redo:mc:bw:control ; return 0
-    };lappend mc_bw($idx:arg) $arg
-   }
-   putdcc $idx ""
-   putdcc $idx "\[0-99+\] How many warnings do you want to give before a ban?  (default= 0)"
-  }
-  4 {
-   if {[regexp -- {[^0-9]} $arg]} {
-    putdcc $idx "Invalid number of warnings: $arg"
-    set mc_bw($idx:switch) 3
-    mc:bw:control:+badword $idx ----redo:mc:bw:control ; return 0
-   } ; lappend mc_bw($idx:arg) "#$arg"
-   putdcc $idx ""
-   putdcc $idx "\[XdXhXm\] When do you want this entry to expire?  (default= 0d0h0m (aka perm))"
-   putdcc $idx " ^^^^^^- X represents a positive number.  d is day, h is hour, m is minute"
-  }
-  5 {
-   if {$arg != "----redo:mc:bw:control"} {
-    lappend mc_bw($idx:arg) "%[mc:bw:inter:exp2exp $arg]"
-   }
-   putdcc $idx ""
-   putdcc $idx "What do you want the kick/warn message to say?"
-  }
-  6 {
-   if {$arg == ""} {
-    putdcc $idx "No kick/warn message specified."
-    set mc_bw($idx:switch) 5
-    mc:bw:control:+badword $idx ----redo:mc:bw:control ; return 0
-   } ; append mc_bw($idx:arg) " $arg"
-   putdcc $idx ""
-   putdcc $idx "Performing: .+badword $mc_bw($idx:arg)"
-   if {[catch {*mc:bw:dcc:+badword [idx2hand $idx] $idx $mc_bw($idx:arg)} error]} {
-    putdcc $idx "Error: $error"
-   }
-   unset mc_bw($idx:arg)
-   unset mc_bw($idx:switch)
-   putdcc $idx ""
-   putdcc $idx "Exiting prompt interface."
-   return 1
-  }
-  default {putdcc $idx "Error($mc_bw($idx:switch))";return 1}
- };incr mc_bw($idx:switch);return 0
+	global mc_bw
+	if {$arg == "*bye*"} {
+		putdcc $idx ""
+		putdcc $idx "Exiting prompt interface."
+		catch {unset mc_bw($idx:arg)}
+		catch {unset mc_bw($idx:switch)}
+		return 1
+	}
+	switch -- $mc_bw($idx:switch) {
+		1 {
+			set mc_bw($idx:arg) ""
+			putdcc $idx ""
+			putdcc $idx "\[#channel|message|global\] What channel?"
+		}
+		2 {
+			if {$arg != "----redo:mc:bw:control"} {
+				if {[string index $arg 0] == "#"} {
+					if {![validchan $arg]} {
+						putdcc $idx "Invalid channel: $arg"
+						set mc_bw($idx:switch) 1
+						mc:bw:control:+badword $idx .
+						return 0
+					}
+				} elseif {($arg != "global") && ($arg != "message")} {
+					putdcc $idx "Invalid channel option: $arg"
+					set mc_bw($idx:switch) 1
+					mc:bw:control:+badword $idx .
+					return 0
+				}
+				if {[string index $arg 0] != "#"} {set arg &$arg}
+				lappend mc_bw($idx:arg) $arg
+			}
+			putdcc $idx ""
+			putdcc $idx "Enter your *bad*string*:"
+		}
+		3 {
+			if {$arg != "----redo:mc:bw:control"} {
+				if {$arg == ""} {
+					putdcc $idx "No *bad*string* entered."
+					set mc_bw($idx:switch) 2
+					mc:bw:control:+badword $idx ----redo:mc:bw:control
+					return 0
+				}; lappend mc_bw($idx:arg) $arg
+			}
+			putdcc $idx ""
+			set temp(1) "How many warnings do you want to give before a ban?"
+			putdcc $idx "\[0-99+\] $temp(1)  (default= 0)"
+		}
+		4 {
+			if {[regexp -- {[^0-9]} $arg]} {
+				putdcc $idx "Invalid number of warnings: $arg"
+				set mc_bw($idx:switch) 3
+				mc:bw:control:+badword $idx ----redo:mc:bw:control
+				return 0
+			}
+			lappend mc_bw($idx:arg) "#$arg"
+			putdcc $idx ""
+			set temp(1) "When do you want this entry to expire?"
+			putdcc $idx "\[XdXhXm\] $temp(1)  (default= 0d0h0m (aka perm))"
+			set temp(1) "X represents a positive number."
+			putdcc $idx " ^^^^^^- $temp(1)  d is day, h is hour, m is minute"
+		}
+		5 {
+			if {$arg != "----redo:mc:bw:control"} {
+				lappend mc_bw($idx:arg) "%[mc:bw:inter:exp2exp $arg]"
+			}
+			putdcc $idx ""
+			putdcc $idx "What do you want the kick/warn message to say?"
+		}
+		6 {
+			if {$arg == ""} {
+				putdcc $idx "No kick/warn message specified."
+				set mc_bw($idx:switch) 5
+				mc:bw:control:+badword $idx ----redo:mc:bw:control
+				return 0
+			}
+			append mc_bw($idx:arg) " $arg"
+			putdcc $idx ""
+			putdcc $idx "Performing: .+badword $mc_bw($idx:arg)"
+			set temp(1) "*mc:bw:dcc:+badword [idx2hand $idx] $idx $mc_bw($idx:arg)"
+			if {[catch {$temp(1)} error]} {putdcc $idx "Error: $error"}
+			unset mc_bw($idx:arg)
+			unset mc_bw($idx:switch)
+			putdcc $idx ""
+			putdcc $idx "Exiting prompt interface."
+			return 1
+		}
+		default {
+			putdcc $idx "Error($mc_bw($idx:switch))"
+			return 1
+		}
+	}
+	incr mc_bw($idx:switch)
+	return 0
 }
 
 # +exemptword [#channel|&message|&global] <*exempt*string*> [%expire <XdXhXm>]
 bind dcc - +exemptwords *mc:bw:dcc:+exemptword
 proc *mc:bw:dcc:+exemptword {hand idx arg} {
- return [mc:bw:errchk *mc:bw:dcc:+exemptword_ [list $hand $idx $arg]]
+	return [mc:bw:errchk *mc:bw:dcc:+exemptword_ [list $hand $idx $arg]]
 }
 proc *mc:bw:dcc:+exemptword_ {hand idx arg} {
- global mc_bw
- if {$arg == ""} {
-  control $idx mc:bw:control:+exemptword
-  putdcc $idx "$mc_bw(script), entering +exemptword prompt interface."
-  putdcc $idx "  To exit early: *bye*"
-  putdcc $idx "_________________________________________________"
-  set mc_bw($idx:arg) ""
-  putdcc $idx ""
-  putdcc $idx "\[#channel|message|global\] What channel?"
-  set mc_bw($idx:switch) 2
-  return 0
- }
- if {[regexp -- {^-?(-h(elp)?|-\?|-s(yntax)?)$} $arg]} {
-  putdcc $idx "$mc_bw(script): Syntax should be\; +exemptword \[#channel|&message|&global\] <*exempt*string*> \[%expire <XdXhXm>\]"
-  return 0
- }
- set temp [mc:bw:inter:examin $arg $idx $hand +]
- set chan [lindex $temp 0]
- if {($chan == "&default") || ($chan == "all")} {set chan "&global"}
- set string [lindex $temp 1]
- set has_access [lindex $temp 2]
- set access [lindex $temp 3]
- set expire [lindex $temp 6]
- while {[regexp -- \\*\\* $string]} {regsub -all -- \\*\\* $string * string}
- if {([string index $chan 0] != "&") && (![validchan $chan])} {
-  putcmdlog "#$hand# Denied (invalid channel): +exemptwords $arg"
-  putdcc $idx "$mc_bw(script): Invalid channel: $chan"
-  putdcc $idx "Syntax: +exemptword \[\[#channel|&message|&global\] <*bad*string*> \[%expire <XdXhXm>\]\]"
-  return 0
- }
- if {$string == ""} {
-  putcmdlog "#$hand# Denied (no *exempt*string* specified): +exemptwords $arg"
-  putdcc $idx "$mc_bw(script): No *exempt*string* specified."
-  putdcc $idx "Syntax: +exemptword \[\[#channel|&message|&global\] <*bad*string*> \[%expire <XdXhXm>\]\]"
-  return 0
- }
- if {!$has_access} {
-  putcmdlog "#$hand# Denied (no access): +exemptwords $arg"
-  putdcc $idx "$mc_bw(script):  Access denied:  '$access' is required."
-  return 0
- }
- if {![mc:bw:inter:list add $chan $string . $hand 0 $expire . . -exempt]} {
-  putcmdlog "#$hand# Denied (already exists): +exemptwords $arg"
-  putdcc $idx "$mc_bw(script):  Access denied, entry already exists."
-  return 0
- }
- putcmdlog "#$hand# +exemptwords $arg"
- switch -- $chan {
-  &global {set x "the global"}
-  &message {set x "messages"}
-  default {set x "$chan's"}
- }
- putdcc $idx "$mc_bw(script):  Added '$string' to $x exemptwords list."
- return 0
+	global mc_bw
+	if {$arg == ""} {
+		control $idx mc:bw:control:+exemptword
+		putdcc $idx "$mc_bw(script), entering +exemptword prompt interface."
+		putdcc $idx "  To exit early: *bye*"
+		putdcc $idx "_________________________________________________"
+		set mc_bw($idx:arg) ""
+		putdcc $idx ""
+		putdcc $idx "\[#channel|message|global\] What channel?"
+		set mc_bw($idx:switch) 2
+		return 0
+	}
+	if {[regexp -- {^-?(-h(elp)?|-\?|-s(yntax)?)$} $arg]} {
+		set temp(syntax) {+exemptword [#channel|&message|&global] }
+		append temp(syntax) {<*exempt*string*> [%expire <XdXhXm>]}
+		putdcc $idx "$mc_bw(script): Syntax should be\; $temp(syntax)"
+		return 0
+	}
+	set temp [mc:bw:inter:examin $arg $idx $hand +]
+	set chan [lindex $temp 0]
+	if {($chan == "&default") || ($chan == "all")} {set chan "&global"}
+	set string [lindex $temp 1]
+	set has_access [lindex $temp 2]
+	set access [lindex $temp 3]
+	set expire [lindex $temp 6]
+	while {[regexp -- \\*\\* $string]} {regsub -all -- \\*\\* $string * string}
+	if {([string index $chan 0] != "&") && ![validchan $chan]} {
+		putcmdlog "#$hand# Denied (invalid channel): +exemptwords $arg"
+		putdcc $idx "$mc_bw(script): Invalid channel: $chan"
+		set temp(syntax) {+exemptword [[#channel|&message|&global] }
+		append temp(syntax) {<*bad*string*> [%expire<XdXhXm>]]}
+		putdcc $idx "Syntax: $temp(syntax)"
+		return 0
+	}
+	if {$string == ""} {
+		putcmdlog "#$hand# Denied (no *exempt*string* specified): +exemptwords $arg"
+		putdcc $idx "$mc_bw(script): No *exempt*string* specified."
+		set temp(syntax) {+exemptword [[#channel|&message|&global] }
+		append temp(syntax) {<*bad*string*> [%expire <XdXhXm>]]}
+		putdcc $idx "Syntax: $temp(syntax)"
+		return 0
+	}
+	if {!$has_access} {
+		putcmdlog "#$hand# Denied (no access): +exemptwords $arg"
+		putdcc $idx "$mc_bw(script): Access denied: '$access' is required."
+		return 0
+	}
+	if {![mc:bw:inter:list add $chan $string . $hand 0 $expire . . -exempt]} {
+		putcmdlog "#$hand# Denied (already exists): +exemptwords $arg"
+		putdcc $idx "$mc_bw(script): Access denied, entry already exists."
+		return 0
+	}
+	putcmdlog "#$hand# +exemptwords $arg"
+	switch -- $chan {
+		&global  {set x "the global"}
+		&message {set x "messages"  }
+		default  {set x "$chan's"   }
+	}
+	putdcc $idx "$mc_bw(script):  Added '$string' to $x exemptwords list."
+	return 0
 }
 
 proc mc:bw:control:+exemptword {idx arg} {
- global mc_bw
- if {$arg == "*bye*"} {
-  putdcc $idx ""
-  putdcc $idx "Exiting prompt interface."
-  catch {unset mc_bw($idx:arg)}
-  catch {unset mc_bw($idx:switch)}
-  return 1
- }
- switch -- $mc_bw($idx:switch) {
-  1 {
-   set mc_bw($idx:arg) ""
-   putdcc $idx ""
-   putdcc $idx "\[#channel|message|global\] What channel?"
-  }
-  2 {
-   if {$arg != "----redo:mc:bw:control"} {
-    if {[string index $arg 0] == "#"} {
-     if {![validchan $arg]} {
-      putdcc $idx "Invalid channel: $arg"
-      set mc_bw($idx:switch) 1
-      mc:bw:control:+exemptword $idx . ; return 0
-     }
-    } elseif {($arg != "global") && ($arg != "message")} {
-     putdcc $idx "Invalid channel option: $arg"
-     set mc_bw($idx:switch) 1
-     mc:bw:control:+exemptword $idx . ; return 0
-    }
-    if {[string index $arg 0] != "#"} {set arg &$arg}
-    lappend mc_bw($idx:arg) $arg
-   }
-   putdcc $idx ""
-   putdcc $idx "Enter your *exempt*string*:"
-  }
-  3 {
-   if {$arg == ""} {
-    putdcc $idx "No *exempt*string* entered."
-    set mc_bw($idx:switch) 2
-    mc:bw:control:+exemptword $idx ----redo:mc:bw:control ; return 0
-   };lappend mc_bw($idx:arg) $arg
-   putdcc $idx ""
-   putdcc $idx "\[XdXhXm\] When do you want this entry to expire?  (default= 0d0h0m (aka perm))"
-   putdcc $idx " ^^^^^^- X represents a positive number.  d is day, h is hour, m is minute"
-  }
-  4 {
-   lappend mc_bw($idx:arg) "%[mc:bw:inter:exp2exp $arg]"
-   putdcc $idx ""
-   putdcc $idx "Performing: .+badword $mc_bw($idx:arg)"
-   if {[catch {*mc:bw:dcc:+exemptword [idx2hand $idx] $idx $mc_bw($idx:arg)} error]} {
-    putdcc $idx "Error: $error"
-   }
-   unset mc_bw($idx:arg)
-   unset mc_bw($idx:switch)
-   putdcc $idx ""
-   putdcc $idx "Exiting prompt interface."
-   return 1
-  }
-  default {putdcc $idx "Error($mc_bw($idx:switch))";return 1}
- };incr mc_bw($idx:switch);return 0
+	global mc_bw
+	if {$arg == "*bye*"} {
+		putdcc $idx ""
+		putdcc $idx "Exiting prompt interface."
+		catch {unset mc_bw($idx:arg)}
+		catch {unset mc_bw($idx:switch)}
+		return 1
+	}
+	switch -- $mc_bw($idx:switch) {
+		1 {
+			set mc_bw($idx:arg) ""
+			putdcc $idx ""
+			putdcc $idx "\[#channel|message|global\] What channel?"
+		}
+		2 {
+			if {$arg != "----redo:mc:bw:control"} {
+				if {[string index $arg 0] == "#"} {
+					if {![validchan $arg]} {
+						putdcc $idx "Invalid channel: $arg"
+						set mc_bw($idx:switch) 1
+						mc:bw:control:+exemptword $idx .
+						return 0
+					}
+				} elseif {($arg != "global") && ($arg != "message")} {
+					putdcc $idx "Invalid channel option: $arg"
+					set mc_bw($idx:switch) 1
+					mc:bw:control:+exemptword $idx .
+					return 0
+				}
+				if {[string index $arg 0] != "#"} {set arg &$arg}
+				lappend mc_bw($idx:arg) $arg
+			}
+			putdcc $idx ""
+			putdcc $idx "Enter your *exempt*string*:"
+		}
+		3 {
+			if {$arg == ""} {
+				putdcc $idx "No *exempt*string* entered."
+				set mc_bw($idx:switch) 2
+				mc:bw:control:+exemptword $idx ----redo:mc:bw:control
+				return 0
+			}
+			lappend mc_bw($idx:arg) $arg
+			putdcc $idx ""
+			set temp(1) "When do you want this entry to expire?"
+			putdcc $idx "\[XdXhXm\] $temp(1)  (default= 0d0h0m (aka perm))"
+			set temp(1) "X represents a positive number."
+			putdcc $idx " ^^^^^^- $temp(1)  d is day, h is hour, m is minute"
+		}
+		4 {
+			lappend mc_bw($idx:arg) "%[mc:bw:inter:exp2exp $arg]"
+			putdcc $idx ""
+			putdcc $idx "Performing: .+badword $mc_bw($idx:arg)"
+			set temp(1) "*mc:bw:dcc:+exemptword [idx2hand $idx] $idx $mc_bw($idx:arg)"
+			if {[catch {$temp(1)} error]} {putdcc $idx "Error: $error"}
+			unset mc_bw($idx:arg)
+			unset mc_bw($idx:switch)
+			putdcc $idx ""
+			putdcc $idx "Exiting prompt interface."
+			return 1
+		}
+		default {
+			putdcc $idx "Error($mc_bw($idx:switch))"
+			return 1
+		}
+	}
+	incr mc_bw($idx:switch)
+	return 0
 }
 
 # -badword [<#>channel|&message|&global] <*bad*string*>
 bind dcc - -badwords *mc:bw:dcc:-badword
 proc *mc:bw:dcc:-badword {hand idx arg} {
- return [mc:bw:errchk *mc:bw:dcc:-badword_ [list $hand $idx $arg]]
+	return [mc:bw:errchk *mc:bw:dcc:-badword_ [list $hand $idx $arg]]
 }
 proc *mc:bw:dcc:-badword_ {hand idx arg} {
- global mc_bw
- set temp [mc:bw:inter:examin $arg $idx $hand -]
- set chan [lindex $temp 0]
- if {($chan == "&default") || ($chan == "all")} {set chan "&global"}
- set string [lindex $temp 1]
- set has_access [lindex $temp 2]
- set access [lindex $temp 3]
- if {!$has_access} {
-  putcmdlog "#$hand# Denied (no access): -badwords $arg"
-  putdcc $idx "$mc_bw(script):  Access denied:  '$access' is required."
-  return 0
- }
- if {($string == "") || ([regexp -- {^-?(-h(elp)?|-\?|-s(yntax)?)$} $arg])} {
-  putdcc $idx "$mc_bw(script): Syntax, should be\; -badword \[<#>channel|&message|&global\] <*bad*string*>"
-  return 0
- }
- if {![mc:bw:inter:list rem $chan $string . . . . . . -bad]} {
-  putcmdlog "#$hand# Denied (no entry): -badwords $arg"
-  putdcc $idx "$mc_bw(script):  No such entry: $chan '$string'"
-  return 0
- }
- putcmdlog "#$hand# -badwords $arg"
- switch -- $chan {
-  &global {set x "the global"}
-  &message {set x "messages"}
-  default {set x "$chan's"}
- }
- putdcc $idx "$mc_bw(script):  Removed '$string' from $x badwords list."
- return 0
+	global mc_bw
+	set temp [mc:bw:inter:examin $arg $idx $hand -]
+	set chan [lindex $temp 0]
+	if {($chan == "&default") || ($chan == "all")} {set chan "&global"}
+	set string [lindex $temp 1]
+	set has_access [lindex $temp 2]
+	set access [lindex $temp 3]
+	if {!$has_access} {
+		putcmdlog "#$hand# Denied (no access): -badwords $arg"
+		putdcc $idx "$mc_bw(script): Access denied: '$access' is required."
+		return 0
+	}
+	if {($string == "") || [regexp -- {^-?(-h(elp)?|-\?|-s(yntax)?)$} $arg]} {
+		set temp(syntax) {-badword [channel|&message|&global] <*bad*string*>}
+		putdcc $idx "$mc_bw(script): Syntax, should be\; $temp(syntax)"
+		return 0
+	}
+	if {![mc:bw:inter:list rem $chan $string . . . . . . -bad]} {
+		putcmdlog "#$hand# Denied (no entry): -badwords $arg"
+		putdcc $idx "$mc_bw(script): No such entry: $chan '$string'"
+		return 0
+	}
+	putcmdlog "#$hand# -badwords $arg"
+	switch -- $chan {
+		&global  {set x "the global"}
+		&message {set x "messages"  }
+		default  {set x "$chan's"   }
+	}
+	putdcc $idx "$mc_bw(script): Removed '$string' from $x badwords list."
+	return 0
 }
 
-# -exemptword [<#>channel|&message|&global] <*exempt*string*>
+# -exemptword [channel|&message|&global] <*exempt*string*>
 bind dcc - -exemptwords *mc:bw:dcc:-exemptword
 proc *mc:bw:dcc:-exemptword {hand idx arg} {
- return [mc:bw:errchk *mc:bw:dcc:-exemptword_ [list $hand $idx $arg]]
+	return [mc:bw:errchk *mc:bw:dcc:-exemptword_ [list $hand $idx $arg]]
 }
 proc *mc:bw:dcc:-exemptword_ {hand idx arg} {
- global mc_bw
- set temp [mc:bw:inter:examin $arg $idx $hand -]
- set chan [lindex $temp 0]
- if {($chan == "&default") || ($chan == "all")} {set chan "&global"}
- set string [lindex $temp 1]
- set has_access [lindex $temp 2]
- set access [lindex $temp 3]
- if {!$has_access} {
-  putcmdlog "#$hand# Denied (no access): -exemptwords $arg"
-  putdcc $idx "$mc_bw(script):  Access denied:  '$access' is required."
-  return 0
- }
- if {($string == "") || ([regexp -- {^-?(-h(elp)?|-\?|-s(yntax)?)$} $arg])} {
-  putdcc $idx "$mc_bw(script): Invalid Syntax, should be\; -exemptword \[<#>channel|&message|&global\] <*exempt*string*>"
-  return 0
- }
- if {![mc:bw:inter:list rem $chan $string . . . . . . -exempt]} {
-  putcmdlog "#$hand# Denied (no entry): -exemptwords $arg"
-  putdcc $idx "$mc_bw(script):  No such entry: $chan '$string'"
-  return 0
- }
- putcmdlog "#$hand# -exemptwords $arg"
- switch -- $chan {
-  &global {set x "the global"}
-  &message {set x "messages"}
-  default {set x "$chan's"}
- }
- putdcc $idx "$mc_bw(script):  Removed '$string' from $x exemptwords list."
- return 0
+	global mc_bw
+	set temp [mc:bw:inter:examin $arg $idx $hand -]
+	set chan [lindex $temp 0]
+	if {($chan == "&default") || ($chan == "all")} {set chan "&global"}
+	set string [lindex $temp 1]
+	set has_access [lindex $temp 2]
+	set access [lindex $temp 3]
+	if {!$has_access} {
+		putcmdlog "#$hand# Denied (no access): -exemptwords $arg"
+		putdcc $idx "$mc_bw(script): Access denied: '$access' is required."
+		return 0
+	}
+	if {($string == "") || [regexp -- {^-?(-h(elp)?|-\?|-s(yntax)?)$} $arg]} {
+		set temp(syntax) {-exemptword [channel|&message|&global] <*exempt*string*>}
+		putdcc $idx "$mc_bw(script): Invalid Syntax, should be\; $temp(syntax)"
+		return 0
+	}
+	if {![mc:bw:inter:list rem $chan $string . . . . . . -exempt]} {
+		putcmdlog "#$hand# Denied (no entry): -exemptwords $arg"
+		putdcc $idx "$mc_bw(script): No such entry: $chan '$string'"
+		return 0
+	}
+	putcmdlog "#$hand# -exemptwords $arg"
+	switch -- $chan {
+		&global  {set x "the global"}
+		&message {set x "messages"  }
+		default  {set x "$chan's"   }
+	}
+	putdcc $idx "$mc_bw(script): Removed '$string' from $x exemptwords list."
+	return 0
 }
 
-# badwords [<#>channel|&message|&global|all]
+# badwords [channel|&message|&global|all]
 bind dcc - badwords *mc:bw:dcc:badword
 proc *mc:bw:dcc:badword {hand idx arg} {
- return [mc:bw:errchk *mc:bw:dcc:badword_ [list $hand $idx $arg]]
+	return [mc:bw:errchk *mc:bw:dcc:badword_ [list $hand $idx $arg]]
 }
 proc *mc:bw:dcc:badword_ {hand idx arg} {
- global mc_bw
- if {[regexp -- {^-?(-h(elp)?|-\?|-s(yntax)?)$} $arg]} {
-  putdcc $idx "$mc_bw(script): Syntax, should be\; badwords \[<#>channel|&message|&global|all\]"
-  return 0
- }
- set temp [mc:bw:inter:examin $arg $idx $hand 0]
- set chan [lindex $temp 0]
- if {$chan == "&default"} {set chan "all"}
- set has_access [lindex $temp 2]
- set access [lindex $temp 3]
- if {!$has_access} {
-  putcmdlog "#$hand# Denied (no access): badwords $chan"
-  putdcc $idx "$mc_bw(script):  Access denied:  '$access' is required."
-  return 0
- }
- putcmdlog "#$hand# badwords $chan"
- putdcc $idx "$mc_bw(script) listing for '$chan':"
- foreach line [mc:bw:inter:list list $chan . . . . . . . -bad] {
-  set ta [lindex $line 1] ;# Time added
-  set ch [lindex $line 2] ;# Channel
-  set st [lindex $line 3] ;# String
-  set ms [lindex $line 4] ;# Message
-  set ad [lindex $line 5] ;# Added by
-  set wn [lindex $line 6] ;# Warnings
-  set ex [lindex $line 7] ;# Expires
-  set lu [lindex $line 8] ;# Last used
-  if {[regexp -- day [set ta [mc:bw:inter:ut2d $ta]]]} {lappend ta ago}
-  if {$ex == "0"} {set ex perm} else {
-   if {[regexp -- day [set ex [mc:bw:inter:ut2d $ex]]]} {
-    set ex "expires in $ex"
-   } else {set ex "expires at $ex"}
-  }
-  if {!$lu} {set lu never} else {
-   if {[regexp -- day [set lu [mc:bw:inter:ut2d $lu]]]} {lappend lu ago}
-  }
-  putdcc $idx [format "%9s %s" "$ch:" "$st ($ex)"    ]
-  putdcc $idx [format "%9s %s" ""     "$ad: $ms"     ]
-  putdcc $idx [format "%9s %s" ""     "Warnings: $wn"]
-  putdcc $idx [format "%9s %s" ""     "Last used $lu"]
-  putdcc $idx [format "%9s %s" ""     "Created $ta"  ]
- };return 0
+	global mc_bw
+	if {[regexp -- {^-?(-h(elp)?|-\?|-s(yntax)?)$} $arg]} {
+		set temp(syntax) {badwords [channel|&message|&global|all]}
+		putdcc $idx "$mc_bw(script): Syntax, should be\; $temp(syntax)"
+		return 0
+	}
+	set temp [mc:bw:inter:examin $arg $idx $hand 0]
+	set chan [lindex $temp 0]
+	if {$chan == "&default"} {set chan "all"}
+	set has_access [lindex $temp 2]
+	set access [lindex $temp 3]
+	if {!$has_access} {
+		putcmdlog "#$hand# Denied (no access): badwords $chan"
+		putdcc $idx "$mc_bw(script): Access denied: '$access' is required."
+		return 0
+	}
+	putcmdlog "#$hand# badwords $chan"
+	putdcc $idx "$mc_bw(script) listing for '$chan':"
+	foreach line [mc:bw:inter:list list $chan . . . . . . . -bad] {
+		set ta [lindex $line 1] ;# Time added
+		set ch [lindex $line 2] ;# Channel
+		set st [lindex $line 3] ;# String
+		set ms [lindex $line 4] ;# Message
+		set ad [lindex $line 5] ;# Added by
+		set wn [lindex $line 6] ;# Warnings
+		set ex [lindex $line 7] ;# Expires
+		set lu [lindex $line 8] ;# Last used
+		if {[regexp -- day [set ta [mc:bw:inter:ut2d $ta]]]} {lappend ta ago}
+		if {$ex == "0"} {
+			set ex perm
+		} else {
+			if {[regexp -- day [set ex [mc:bw:inter:ut2d $ex]]]} {
+				set ex "expires in $ex"
+			} else {set ex "expires at $ex"}
+		}
+		if {!$lu} {set lu never} else {
+			if {[regexp -- day [set lu [mc:bw:inter:ut2d $lu]]]} {lappend lu ago}
+		}
+		putdcc $idx [format "%9s %s" "$ch:" "$st ($ex)"    ]
+		putdcc $idx [format "%9s %s" ""     "$ad: $ms"     ]
+		putdcc $idx [format "%9s %s" ""     "Warnings: $wn"]
+		putdcc $idx [format "%9s %s" ""     "Last used $lu"]
+		putdcc $idx [format "%9s %s" ""     "Created $ta"  ]
+	}; return 0
 }
 
-# exemptwords [<#>channel|&message|&global|all]
+# exemptwords [channel|&message|&global|all]
 bind dcc - exemptwords *mc:bw:dcc:exemptword
 proc *mc:bw:dcc:exemptword {hand idx arg} {
- return [mc:bw:errchk *mc:bw:dcc:exemptword_ [list $hand $idx $arg]]
+	return [mc:bw:errchk *mc:bw:dcc:exemptword_ [list $hand $idx $arg]]
 }
 proc *mc:bw:dcc:exemptword_ {hand idx arg} {
- global mc_bw
- if {[regexp -- {^-?(-h(elp)?|-\?|-s(yntax)?)$} $arg]} {
-  putdcc $idx "$mc_bw(script): Syntax, should be\; exemptwords \[<#>channel|&message|&global|all\]"
-  return 0
- }
- set temp [mc:bw:inter:examin $arg $idx $hand 0]
- set chan [lindex $temp 0]
- if {$chan == "&default"} {set chan "all"}
- set has_access [lindex $temp 2]
- set access [lindex $temp 3]
- if {!$has_access} {
-  putcmdlog "#$hand# Denied (no access): exemptwords $chan"
-  putdcc $idx "$mc_bw(script):  Access denied:  '$access' is required."
-  return 0
- }
- putcmdlog "#$hand# exemptwords $chan"
- putdcc $idx "Exemptwords listing for '$chan':"
- foreach line [mc:bw:inter:list list $chan . . . . . . . -exempt] {
-  set ta [lindex $line 1] ;# Time added
-  set ch [lindex $line 2] ;# Channel
-  set st [lindex $line 3] ;# String
-  set ad [lindex $line 5] ;# Added by
-  set ex [lindex $line 7] ;# Expires
-  set lu [lindex $line 8] ;# Last used
-  if {[regexp -- day [set ta [mc:bw:inter:ut2d $ta]]]} {lappend ta ago}
-  if {$ex == "0"} {set ex perm} else {
-   if {[regexp -- day [set ex [mc:bw:inter:ut2d $ex]]]} {
-    set ex "expires in $ex"
-   } else {set ex "expires at $ex"}
-  }
-  if {!$lu} {set lu never} else {
-   if {[regexp -- day [set lu [mc:bw:inter:ut2d $lu]]]} {lappend lu ago}
-  }
-  putdcc $idx [format "%9s %s" "$ch:" "$st ($ex)"     ]
-  putdcc $idx [format "%9s %s" ""     "Added By : $ad"]
-  putdcc $idx [format "%9s %s" ""     "Last used: $lu"]
-  putdcc $idx [format "%9s %s" ""     "Created $ta"   ]
- };return 0
+	global mc_bw
+	if {[regexp -- {^-?(-h(elp)?|-\?|-s(yntax)?)$} $arg]} {
+		set temp(syntax) {exemptwords [channel|&message|&global|all]}
+		putdcc $idx "$mc_bw(script): Syntax, should be\; $temp(syntax)"
+		return 0
+	}
+	set temp [mc:bw:inter:examin $arg $idx $hand 0]
+	set chan [lindex $temp 0]
+	if {$chan == "&default"} {set chan "all"}
+	set has_access [lindex $temp 2]
+	set access [lindex $temp 3]
+	if {!$has_access} {
+		putcmdlog "#$hand# Denied (no access): exemptwords $chan"
+		putdcc $idx "$mc_bw(script): Access denied: '$access' is required."
+		return 0
+	}
+	putcmdlog "#$hand# exemptwords $chan"
+	putdcc $idx "Exemptwords listing for '$chan':"
+	foreach line [mc:bw:inter:list list $chan . . . . . . . -exempt] {
+		set ta [lindex $line 1] ;# Time added
+		set ch [lindex $line 2] ;# Channel
+		set st [lindex $line 3] ;# String
+		set ad [lindex $line 5] ;# Added by
+		set ex [lindex $line 7] ;# Expires
+		set lu [lindex $line 8] ;# Last used
+		if {[regexp -- day [set ta [mc:bw:inter:ut2d $ta]]]} {lappend ta ago}
+		if {$ex == "0"} {
+			set ex perm
+		} else {
+			if {[regexp -- day [set ex [mc:bw:inter:ut2d $ex]]]} {
+				set ex "expires in $ex"
+			} else {set ex "expires at $ex"}
+		}
+		if {!$lu} {set lu never} else {
+			if {[regexp -- day [set lu [mc:bw:inter:ut2d $lu]]]} {lappend lu ago}
+		}
+		putdcc $idx [format "%9s %s" "$ch:" "$st ($ex)"     ]
+		putdcc $idx [format "%9s %s" ""     "Added By : $ad"]
+		putdcc $idx [format "%9s %s" ""     "Last used: $lu"]
+		putdcc $idx [format "%9s %s" ""     "Created $ta"   ]
+	}; return 0
 }
 
 bind pubm - * mc:bw:pubm
 proc mc:bw:pubm {nick uhost hand chan arg} {
- return [mc:bw:errchk mc:bw:pubm_ [list $nick $uhost $hand $chan $arg]]
+	return [mc:bw:errchk mc:bw:pubm_ [list $nick $uhost $hand $chan $arg]]
 }
 proc mc:bw:pubm_ {nick uhost hand chan arg} {
 	mc:bw:bw $nick $uhost $hand $chan $arg pub
@@ -839,14 +895,14 @@ proc mc:bw:pubm_ {nick uhost hand chan arg} {
 
 bind ctcp - ACTION mc:bw:ctcp
 proc mc:bw:ctcp {nick uhost hand chan key arg} {
- return [mc:bw:errchk mc:bw:ctcp_ [list $nick $uhost $hand $chan $key $arg]]
+	return [mc:bw:errchk mc:bw:ctcp_ [list $nick $uhost $hand $chan $key $arg]]
 }
 proc mc:bw:ctcp_ {nick uhost hand chan key arg} {
- global botnick mc_bw
- mc:bw:bw $nick $uhost $hand $chan $arg action
- if {($mc_bw(procmsg)) && ($chan == [string tolower $botnick])} {
-  foreach channel [channels] {mc:bw:bw $nick $uhost $hand $channel $arg action}
- }
+	global botnick mc_bw
+	mc:bw:bw $nick $uhost $hand $chan $arg action
+	if {$mc_bw(procmsg) && [isbotnick $chan]} {
+		foreach channel [channels] {mc:bw:bw $nick $uhost $hand $channel $arg action}
+	}
 }
 
 bind notc - * mc:bw:notc
@@ -1145,7 +1201,7 @@ proc mc:bw:bot_ {from command arg} {
 
 bind link - * mc:bw:link
 proc mc:bw:link {bot via} {
- return [mc:bw:errchk mc:bw:link_ [list $bot $via]]
+	return [mc:bw:errchk mc:bw:link_ [list $bot $via]]
 }
 proc mc:bw:link_ {bot via} {mc:bw:inter:share U:$bot}
 
@@ -1156,331 +1212,364 @@ proc mc:bw:link_ {bot via} {mc:bw:inter:share U:$bot}
 #   mc:bw:inter:share U:<bot>
 # > x share cmd arg
 proc mc:bw:inter:share {command {arg {}}} {
- global mc_bw
- set chan [lindex $arg 0]
- set cmd [string range $command 0 [expr [string first : $command]-1]]
- set bot [string range $command [expr [string first : $command]+1] end]
- if {$cmd == "U"} {
-  if {$bot == "-all"} {putallbots [list badwords n share U]} elseif {[islinked $bot]} {
-   putbot $bot [list badwords n share U]
-  };return
- }
- if {$cmd == "load"} {
-  if {$bot == "-all"} {set bot [bots]}
-  foreach _bot $bot {
-   if {![islinked $_bot]} {continue}
-   if {[string index $chan 0] != "#"} {
-    set access [matchattr $_bot b$mc_bw(share:flag)|]
-   } elseif {[validchan $chan]} {
-    set access [matchattr $_bot b$mc_bw(share:flag)|$mc_bw(share:flag) $chan]
-   } else {set access 0}
-   if {$access} {putbot $_bot "[list badwords n share load] $arg"}
-  }; return
- }
- if {[string index $chan 0] != "#"} {set userlist [userlist b$mc_bw(share:flag)|]} elseif {[validchan $chan]} {
-  set userlist [userlist b$mc_bw(share:flag)|$mc_bw(share:flag) $chan]
- } else {set userlist ""}
- foreach bot $userlist {
-  if {![islinked $bot]} {continue}
-  putbot $bot "[list badwords n share $command] $arg"
- }
+	global mc_bw
+	set chan [lindex $arg 0]
+	set cmd [string range $command 0 [expr [string first : $command]-1]]
+	set bot [string range $command [expr [string first : $command]+1] end]
+	if {$cmd == "U"} {
+		if {$bot == "-all"} {
+			putallbots [list badwords n share U]
+		} elseif {[islinked $bot]} {
+			putbot $bot [list badwords n share U]
+		}; return
+	}
+	if {$cmd == "load"} {
+		if {$bot == "-all"} {set bot [bots]}
+		foreach _bot $bot {
+			if {![islinked $_bot]} {continue}
+			if {[string index $chan 0] != "#"} {
+				set access [matchattr $_bot b$mc_bw(share:flag)|]
+			} elseif {[validchan $chan]} {
+				set access [matchattr $_bot b$mc_bw(share:flag)|$mc_bw(share:flag) $chan]
+			} else {set access 0}
+			if {$access} {putbot $_bot "[list badwords n share load] $arg"}
+		}; return
+	}
+	if {[string index $chan 0] != "#"} {set userlist [userlist b$mc_bw(share:flag)|]} elseif {[validchan $chan]} {
+		set userlist [userlist b$mc_bw(share:flag)|$mc_bw(share:flag) $chan]
+	} else {set userlist ""}
+	foreach bot $userlist {
+		if {![islinked $bot]} {continue}
+		putbot $bot "[list badwords n share $command] $arg"
+	}
 }
 
 # {-(bad|exempt) time_added channel string message added_by warnings expire lastused}
 proc mc:bw:inter:list {cmd {chan {}} {string {}} {text {}} {hand {}} \
                        {warnings {}} {expire {}} {lu {}} {q {}} {type {}}} {
-	return [mc:bw:errchk mc:bw:inter:list_ [list $cmd $chan $string $text $hand \
-                                               $warnings $expire $lu $q $type]]
+	return [mc:bw:errchk mc:bw:inter:list_ [list $cmd $chan $string $text $hand
+		$warnings $expire $lu $q $type]]
 }
 proc mc:bw:inter:list_ {cmd chan string text hand warnings expire lu q type} {
- global mc_bw {botnet-nick}
- set chan [string tolower $chan]
- if {![info exists mc_bw(list)]} {set mc_bw(list) ""}
- switch -- $cmd {
-  add {
-   if {[mc:bw:inter:list exists $chan $string . . . . . . $type]} {return 0}
-   lappend mc_bw(list) [list $type [clock seconds] $chan $string [string range $text 0 299] $hand $warnings $expire 0]
-   mc:bw:inter:list save -quiet
-   mc:bw:inter:list expire . . . . . . . . $type
-   if {$q != "NO"} {
-    mc:bw:inter:share add [list $type $chan $string $text $hand $warnings $expire 0]
-   };return 1
-  }
-  exists {
-   foreach line $mc_bw(list) {
-    set a [lindex $line 0]; set b [lindex $line 2]; set c [lindex $line 3]
-    if {[string tolower "$a $b $c"] == [string tolower "$type $chan $string"]} {return 1}
-   };return 0
-  }
-  expire {
-   while {[regexp -- "\[0-9\]* \{mc:bw:inter:list expire . . . . . . . . $type\} timer\[0-9\]*" [utimers] timer]} {
-    killutimer [lindex $timer 2]
-   }
-   set ex 0
-   foreach line [lsort -dictionary -index 6 [mc:bw:inter:list list all . . . . . . . $type]] {
-    set cs [lindex $line 1] ;# Time added
-    set ch [lindex $line 2] ;# Channel
-    set st [lindex $line 3] ;# String
-    set ms [lindex $line 4] ;# Message
-    set ad [lindex $line 5] ;# Added by
-    set wn [lindex $line 6] ;# Warnings
-    set ex [lindex $line 7] ;# Expires
-    set lu [lindex $line 8] ;# Last used
-    if {!$ex} {continue}
-    if {[clock seconds] >= $ex} {
-     mc:bw:inter:list rem $ch $st expired . . . . . $type
-     switch -- $ch {
-      &global {set x "the global"}
-      &message {set x "messages"}
-      default {set x "$chan's"}
-     }
-     putlog "$mc_bw(script):  Removed '$st' from $x [string trimleft ${type} -]words list. (expired)"
-     set ex 0
-    } else {break}
-   }
-   if {$ex} {
-    if {[set ex [expr $ex-[clock seconds]]] < "1"} {set ex 1}
-    utimer $ex "mc:bw:inter:list expire . . . . . . . . $type"
-   }
-  }
-  list {
-   set return ""
-   foreach line $mc_bw(list) {
-    if {$type != [lindex $line 0]} {continue}
-    if {([string tolower $chan] == [string tolower [lindex $line 2]]) ||
-        ([string tolower $chan] == "all")} {lappend return $line}
-   };return "[lsort -dictionary -index 1 [lsort -dictionary -index 0 $return]]"
-  }
-	load {
-		set mc_bw(list) ""
-		if {![file exists $mc_bw(database)]} {close [open $mc_bw(database) w]}
-		set io [open $mc_bw(database) r]
-		set db_ver ""
-		if {![eof $io]} { regexp -- {^#v[0-9]*:} [gets $io] db_ver }
-		while {![eof $io]} {
-			gets $io line
-			if {([string trim $line " "] == "") ||
-			    ([string index $line 0] == "#")} {continue}
-			switch -- $db_ver {
-				"#v1:"  { set temp(line) "-bad $line 0 0 0" }
-				"#v2:"  { set temp(line) "-bad $line"       }
-				"#v3:"  { set temp(line) $line              }
-				default { set temp(line) "-bad $line 0 0 0" }
-			}
-			set ty [lindex $temp(line) 0] ;# Type
-			set ta [lindex $temp(line) 1] ;# Time added
-			set ch [lindex $temp(line) 2] ;# Channel
-			set st [lindex $temp(line) 3] ;# String
-			set ms [lindex $temp(line) 4] ;# Message
-			set ad [lindex $temp(line) 5] ;# Added by
-			set wn [lindex $temp(line) 6] ;# Warnings
-			set ex [lindex $temp(line) 7] ;# Expires
-			set lu [lindex $temp(line) 8] ;# Last used
-
-			# Scan format, ensure correct before load.
-			set temp(skip) 0
-			    if {![regexp {^-(bad|exempt)$} $ty]} {set temp(skip) 1} \
-			elseif {[regexp {^[^0-9]$} $ta]} {set temp(skip) 1} \
-			elseif {$ch == ""} {set temp(skip) 1} \
-			elseif {$st == ""} {set temp(skip) 1} \
-			elseif {$ad == ""} {set temp(skip) 1} \
-			elseif {[regexp {^[^0-9]$} $wn]} {set temp(skip) 1} \
-			elseif {[regexp {^[^0-9]$} $ex]} {set temp(skip) 1} \
-			elseif {[regexp {^[^0-9]$} $lu]} {set temp(skip) 1}
-			if {$temp(skip)} {
-				set temp(1) "Loading datafile, skipping '$temp(line)'"
-				putloglev d * "$mc_bw(script):  $temp(1).  INVALID FORMAT"
-				continue
-			}
-			# ^
-
-			lappend mc_bw(list) $temp(line)
-			mc:bw:inter:share load:$chan [list $ty $ch $st $ms $ad $wn $ex $lu]
+	global mc_bw {botnet-nick}
+	set chan [string tolower $chan]
+	if {![info exists mc_bw(list)]} {set mc_bw(list) ""}
+	switch -- $cmd {
+		add {
+			if {[mc:bw:inter:list exists $chan $string . . . . . . $type]} {return 0}
+			lappend mc_bw(list) [list $type [clock seconds] $chan $string \
+				[string range $text 0 299] $hand $warnings $expire 0]
+			mc:bw:inter:list save -quiet
+			mc:bw:inter:list expire . . . . . . . . $type
+			if {$q != "NO"} {
+				mc:bw:inter:share add [list $type $chan $string $text $hand $warnings \
+					$expire 0]
+			}; return 1
 		}
-		close $io
-		mc:bw:inter:list expire . . . . . . . . -exempt
-		mc:bw:inter:list expire . . . . . . . . -bad
-		return 1
+		exists {
+			foreach line $mc_bw(list) {
+				set a [lindex $line 0]
+				set b [lindex $line 2]
+				set c [lindex $line 3]
+				if {[string tolower "$a $b $c"] == [string tolower "$type $chan $string"]} {
+					return 1
+				}
+			}; return 0
+		}
+		expire {
+			set temp(cmd) "mc:bw:inter:list expire . . . . . . . . $type"
+			while {[regexp -- "\[0-9\]* \{$temp(cmd)\} timer\[0-9\]*" [utimers] timer]} {
+				killutimer [lindex $timer 2]
+			}
+			set ex 0
+			set temp(1) [mc:bw:inter:list list all . . . . . . . $type]
+			foreach line [lsort -dictionary -index 6 $temp(1)] {
+				set cs [lindex $line 1] ;# Time added
+				set ch [lindex $line 2] ;# Channel
+				set st [lindex $line 3] ;# String
+				set ms [lindex $line 4] ;# Message
+				set ad [lindex $line 5] ;# Added by
+				set wn [lindex $line 6] ;# Warnings
+				set ex [lindex $line 7] ;# Expires
+				set lu [lindex $line 8] ;# Last used
+				if {!$ex} {continue}
+				if {[clock seconds] >= $ex} {
+					mc:bw:inter:list rem $ch $st expired . . . . . $type
+					switch -- $ch {
+						&global  {set x "the global"}
+						&message {set x "messages"  }
+						default  {set x "$chan's"   }
+					}
+					set temp(1) "Removed '$st' from $x [string trimleft ${type} -]words list."
+					putlog "$mc_bw(script): $temp(1) (expired)"
+					set ex 0
+				} else {break}
+			}
+			if {$ex} {
+				if {[set ex [expr $ex-[clock seconds]]] < "1"} {set ex 1}
+				utimer $ex "mc:bw:inter:list expire . . . . . . . . $type"
+			}
+		}
+		list {
+			set return ""
+			foreach line $mc_bw(list) {
+				if {$type != [lindex $line 0]} {continue}
+				if {([string tolower $chan] == [string tolower [lindex $line 2]]) ||
+				    ([string tolower $chan] == "all")} {lappend return $line}
+			}; return [lsort -dictionary -index 1 [lsort -dictionary -index 0 $return]]
+		}
+		load {
+			set mc_bw(list) ""
+			if {![file exists $mc_bw(database)]} {close [open $mc_bw(database) w]}
+			set io [open $mc_bw(database) r]
+			set db_ver ""
+			for {set for_i 0} {![eof $io]} {incr for_i} {
+				gets $io line
+				if {!$for_i} {
+					if {[regexp -- {^#v[0-9]*:} $line db_ver]} {continue}
+				}
+				if {([string trim $line " "] == "") ||
+				    ([string index $line 0] == "#")} {continue}
+				switch -- $db_ver {
+					"#v2:"  { set temp(line) "-bad $line"              }
+					"#v3:"  { set temp(line) $line                     }
+					default { set temp(line) "-bad $line "" * 0 0 0 0" }
+				}
+				set ty [lindex $temp(line) 0] ;# Type
+				set ta [lindex $temp(line) 1] ;# Time added
+				set ch [lindex $temp(line) 2] ;# Channel
+				set st [lindex $temp(line) 3] ;# String
+				set ms [lindex $temp(line) 4] ;# Message
+				set ad [lindex $temp(line) 5] ;# Added by
+				set wn [lindex $temp(line) 6] ;# Warnings
+				set ex [lindex $temp(line) 7] ;# Expires
+				set lu [lindex $temp(line) 8] ;# Last used
+
+				# Scan format, ensure correct before load.
+				if {![regexp {^-(bad|exempt)$} $ty] || [regexp {^[^0-9]$} $ta] ||
+				    ($ch == "") || ($st == "") || ($ad == "") || [regexp {^[^0-9]$} $wn] ||
+				    [regexp {^[^0-9]$} $ex] || [regexp {^[^0-9]$} $lu]} {
+					set temp(1) "Loading datafile, skipping '$temp(line)'"
+					putloglev d * "$mc_bw(script): $temp(1).  INVALID FORMAT"
+					continue
+				}
+				# ^
+
+				lappend mc_bw(list) $temp(line)
+				mc:bw:inter:share load:$chan [list $ty $ch $st $ms $ad $wn $ex $lu]
+			}
+			close $io
+			mc:bw:inter:list expire . . . . . . . . -exempt
+			mc:bw:inter:list expire . . . . . . . . -bad
+			return 1
+		}
+		match {
+			foreach line [mc:bw:inter:list list $chan . . . . . . . $type] {
+				set cs [lindex $line 1] ;# Time added
+				set ch [lindex $line 2] ;# Channel
+				set st [lindex $line 3] ;# String
+				set ms [lindex $line 4] ;# Message
+				set ad [lindex $line 5] ;# Added by
+				set wn [lindex $line 6] ;# Warnings
+				set ex [lindex $line 7] ;# Expires
+				set lu [lindex $line 8] ;# Last used
+				if {(($mc_bw(use:regexp)) &&
+				     ([regexp -- [string tolower $st] [string tolower $text]])) ||
+				    ((!$mc_bw(use:regexp)) &&
+				     ([string match [string tolower $st] [string tolower $text]]))} {
+					mc:bw:inter:list update $chan $st $ms $ad $wn $ex [clock seconds] -quiet \
+						$type
+					return $line
+				}
+			}; return ""
+		}
+		rem {
+			if {![mc:bw:inter:list exists $chan $string . . . . . . $type]} {return 0}
+			set list ""
+			foreach line $mc_bw(list) {
+				set temp(1) "[list [lindex $line 0]] [lrange $line 2 3]"
+				set temp(2) [list $type $chan $string]
+				if {[string tolower $temp(1)] != [string tolower $temp(2)]} {
+					lappend list $line
+				}
+			}
+			set mc_bw(list) $list
+			mc:bw:inter:list save -quiet
+			if {$q != "NO"} {mc:bw:inter:share rem [list $type $chan $string $text]}
+			return 1
+		}
+		save {
+			if {$chan != "-quiet"} {putloglev o * "Writing badwords file..."}
+			if {![file exists $mc_bw(database)]} {close [open $mc_bw(database) w]}
+			set io [open $mc_bw(database) w]
+			puts $io "#v3:$mc_bw(version):${botnet-nick}:[clock seconds]"
+			foreach line [mc:bw:inter:list list all . . . . . . . -bad] {puts $io $line}
+			foreach line [mc:bw:inter:list list all . . . . . . . -exempt] {puts $io $line}
+			close $io
+			return 1
+		}
+		update {
+			if {![mc:bw:inter:list exists $chan $string . . . . . . $type]} {return 0}
+			set list ""
+			foreach line $mc_bw(list) {
+				set ty [lindex $line 0] ;# Type
+				set ta [lindex $line 1] ;# Time added
+				set ch [lindex $line 2] ;# Channel
+				set st [lindex $line 3] ;# String
+				set temp(1) [string tolower "$type $chan $string"]
+				if {[string tolower "$ty $ch $st"] == $temp(1)} {
+					lappend list [list $ty $ta $chan $string $text $hand $warnings $expire $lu]
+				} else {lappend list $line}
+			}
+			set mc_bw(list) $list
+			mc:bw:inter:list save -quiet
+			mc:bw:inter:list expire . . . . . . . . $type
+			if {$q != "NO"} {
+				mc:bw:inter:share update [list $type $chan $string $text $hand $warnings \
+					$expire $lu $q]
+			}; return 1
+		}
 	}
-  match {
-   foreach line [mc:bw:inter:list list $chan . . . . . . . $type] {
-    set cs [lindex $line 1] ;# Time added
-    set ch [lindex $line 2] ;# Channel
-    set st [lindex $line 3] ;# String
-    set ms [lindex $line 4] ;# Message
-    set ad [lindex $line 5] ;# Added by
-    set wn [lindex $line 6] ;# Warnings
-    set ex [lindex $line 7] ;# Expires
-    set lu [lindex $line 8] ;# Last used
-    if {(($mc_bw(use:regexp)) &&
-         ([regexp -- [string tolower $st] [string tolower $text]])) ||
-        ((!$mc_bw(use:regexp)) &&
-         ([string match [string tolower $st] [string tolower $text]]))} {
-     mc:bw:inter:list update $chan $st $ms $ad $wn $ex [clock seconds] -quiet $type
-     return $line
-    }
-   }; return ""
-  }
-  rem {
-   if {![mc:bw:inter:list exists $chan $string . . . . . . $type]} {return 0}
-   set list ""
-   foreach line $mc_bw(list) {
-    if {[string tolower "[list [lindex $line 0]] [lrange $line 2 3]"] != [string tolower [list $type $chan $string]]} {
-     lappend list $line
-    }
-   }
-   set mc_bw(list) $list
-   mc:bw:inter:list save -quiet
-   if {$q != "NO"} { mc:bw:inter:share rem [list $type $chan $string $text] }
-   return 1
-  }
-  save {
-   if {$chan != "-quiet"} {putloglev o * "Writing badwords file..."}
-   if {![file exists $mc_bw(database)]} {close [open $mc_bw(database) w]}
-   set io [open $mc_bw(database) w]
-   puts $io "#v3:$mc_bw(version):${botnet-nick}:[clock seconds]"
-   foreach line [mc:bw:inter:list list all . . . . . . . -bad] {puts $io $line}
-   foreach line [mc:bw:inter:list list all . . . . . . . -exempt] {puts $io $line}
-   close $io;return 1
-  }
-  update {
-   if {![mc:bw:inter:list exists $chan $string . . . . . . $type]} {return 0}
-   set list ""
-   foreach line $mc_bw(list) {
-    set ty [lindex $line 0] ;# Type
-    set ta [lindex $line 1] ;# Time added
-    set ch [lindex $line 2] ;# Channel
-    set st [lindex $line 3] ;# String
-    if {[string tolower "$ty $ch $st"] == [string tolower "$type $chan $string"]} {
-     lappend list [list $ty $ta $chan $string $text $hand $warnings $expire $lu]
-    } else {lappend list $line}
-   }; set mc_bw(list) $list
-   mc:bw:inter:list save -quiet
-   mc:bw:inter:list expire . . . . . . . . $type
-   if {$q != "NO"} {
-    mc:bw:inter:share update [list $type $chan $string $text $hand $warnings $expire $lu $q]
-   };return 1
-  }
- }
 }
 
 proc mc:bw:warn {host chan string warn} {
- global mc_bw
- set host [string tolower $host]
- set chan [string tolower $chan]
- set string [string tolower $string]
- if {![info exists mc_bw(warn!$host:$chan:$string)]} {set mc_bw(warn!$host:$chan:$string) 0}
- if {$warn <= $mc_bw(warn!$host:$chan:$string)} {return 0}
- incr mc_bw(warn!$host:$chan:$string);return 1
+	global mc_bw
+	set host [string tolower $host]
+	set chan [string tolower $chan]
+	set string [string tolower $string]
+	if {![info exists mc_bw(warn!$host:$chan:$string)]} {
+		set mc_bw(warn!$host:$chan:$string) 0
+	}
+	if {$warn <= $mc_bw(warn!$host:$chan:$string)} {return 0}
+	incr mc_bw(warn!$host:$chan:$string);return 1
 }
 
 # in: unixtime
 #out: x day(s) || hh:mm
 proc mc:bw:inter:ut2d {time} {
- set diff [string trimleft [expr [clock seconds]-$time] -]
- if {[set d [expr $diff/60/60/24]] != "0"} {
-  set s "";if {$d != "1"} {set s s};lappend d day$s
- } else {set d [clock format $time -format %H:%M]}
- return $d
+	set diff [string trimleft [expr [clock seconds]-$time] -]
+	if {[set d [expr $diff/60/60/24]] != "0"} {
+		if {$d == "1"} {set s ""} else {set s s}
+		append d day$s
+	} else {
+		set d [clock format $time -format %H:%M]
+	}; return $d
 }
 
 #return: chan string has_access access_type message warnings expire
 proc mc:bw:inter:examin {arg idx hand ar} {
- global mc_bw
- set x 0
- if {[string index [set temp [lindex $arg 0]] 0] == "#"} {
-  set chan [string tolower $temp];set x 1
- } elseif {[string index [set temp [lindex $arg 0]] 0] == "&"} {
-  set temp [string tolower $temp]
-  if {($temp == "&message") || ($temp == "&global")} {set chan $temp;set x 1}
- } elseif {[string tolower [lindex $arg 0]] == "all"} {set chan "all";set x 1}
- if {!$x} {
-  if {[set chan [string tolower [lindex [console $idx] 0]]] == "*"} {set chan "&default"}
- }
- if {([string index $chan 0] == "&") || ($chan == "all")} {
-  set has_access [set access [matchattr $hand [lindex [split $mc_bw(access) |] 0]]]
-  set access "global $access"
- } else {
-  set has_access [set access [matchattr $hand $mc_bw(access) $chan]]
-  append access " $chan"
- }
- if {$ar == "-"} {
-  set string [join [lrange $arg $x end]]
-  set warnings ""
-  set message ""
-  set expire ""
- } else {
-  set string [lindex $arg $x];incr x
-  if {[string index [set temp [lindex $arg $x]] 0] == "#"} {
-   set warnings [string range $temp 1 end];incr x
-  } {set warnings 0}
-  if {[string index [set temp [lindex $arg $x]] 0] == "%"} {
-   set expire [mc:bw:inter:exp2cs [string range $temp 1 end]];incr x
-  } {set expire 0}
-  set message [lrange $arg $x end]
- }
- return [list $chan $string $has_access $access $message $warnings $expire]
+	global mc_bw
+	set x 0
+	if {[string index [set temp [lindex $arg 0]] 0] == "#"} {
+		set chan [string tolower $temp]
+		set x 1
+	} elseif {[string index [set temp [lindex $arg 0]] 0] == "&"} {
+		set temp [string tolower $temp]
+		if {($temp == "&message") || ($temp == "&global")} {
+			set chan $temp
+			set x 1
+		}
+	} elseif {[string tolower [lindex $arg 0]] == "all"} {
+		set chan "all"
+		set x 1
+	}
+	if {!$x} {
+		if {[set chan [string tolower [lindex [console $idx] 0]]] == "*"} {
+			set chan "&default"
+		}
+	}
+	if {([string index $chan 0] == "&") || ($chan == "all")} {
+		set has_access [set access [matchattr $hand [lindex [split $mc_bw(access) |] 0]]]
+		set access "global $access"
+	} else {
+		set has_access [set access [matchattr $hand $mc_bw(access) $chan]]
+		append access " $chan"
+	}
+	if {$ar == "-"} {
+		set string [join [lrange $arg $x end]]
+		set warnings ""
+		set message ""
+		set expire ""
+	} else {
+		set string [lindex $arg $x]
+		incr x
+		if {[string index [set temp [lindex $arg $x]] 0] == "#"} {
+		 set warnings [string range $temp 1 end]
+		 incr x
+		} else {set warnings 0}
+		if {[string index [set temp [lindex $arg $x]] 0] == "%"} {
+			set expire [mc:bw:inter:exp2cs [string range $temp 1 end]]
+			incr x
+		} else {set expire 0}
+		set message [lrange $arg $x end]
+	}
+	return [list $chan $string $has_access $access $message $warnings $expire]
 }
 
 # Converts 1d4h17m to current unixtime + that, returns in unixtime format.
 # If 0d0h0m =(returns)=> 0
 proc mc:bw:inter:exp2cs {time} {
- if {[regexp -- {[^a-zA-Z]?[0-9]m} $time min]} {
-  set min [string range $min 0 [expr [string length $min]-2]]
-  if {$min == ""} {set min 0}
- } else {set min 0}
- if {[regexp -- {[^a-zA-Z]?[0-9]h} $time hour]} {
-  set hour [string range $hour 0 [expr [string length $hour]-2]]
-  if {$hour == ""} {set hour 0}
- } else {set hour 0}
- if {[regexp -- {[^a-zA-Z]?[0-9]d} $time day]} {
-  set day [string range $day 0 [expr [string length $day]-2]]
-  if {$day == ""} {set day 0}
- } else {set day 0}
- set add [expr ($min*60) + ($hour*60*60) + ($day*60*60*24)]
- if {!$add} {return 0} else {return [expr [clock seconds] + $add]}
+	if {[regexp -- {[^a-zA-Z]?[0-9]m} $time min]} {
+		set min [string range $min 0 [expr [string length $min]-2]]
+		if {$min == ""} {set min 0}
+	} else {set min 0}
+	if {[regexp -- {[^a-zA-Z]?[0-9]h} $time hour]} {
+		set hour [string range $hour 0 [expr [string length $hour]-2]]
+		if {$hour == ""} {set hour 0}
+	} else {set hour 0}
+	if {[regexp -- {[^a-zA-Z]?[0-9]d} $time day]} {
+		set day [string range $day 0 [expr [string length $day]-2]]
+		if {$day == ""} {set day 0}
+	} else {set day 0}
+	set add [expr ($min*60) + ($hour*60*60) + ($day*60*60*24)]
+	if {$add} {return [expr [clock seconds] + $add]} \
+	else {return 0}
 }
 
 # Converts 1d4h1d17m9r7k to 1d4h17m.
 proc mc:bw:inter:exp2exp {time} {
- if {[regexp -- {[^a-zA-Z]?[0-9]m} $time min]} {
-  set min [string range $min 0 [expr [string length $min]-2]]
-  if {$min == ""} {set min 0}
- } else {set min 0}
- if {[regexp -- {[^a-zA-Z]?[0-9]h} $time hour]} {
-  set hour [string range $hour 0 [expr [string length $hour]-2]]
-  if {$hour == ""} {set hour 0}
- } else {set hour 0}
- if {[regexp -- {[^a-zA-Z]?[0-9]d} $time day]} {
-  set day [string range $day 0 [expr [string length $day]-2]]
-  if {$day == ""} {set day 0}
- } else {set day 0}
- return "${day}d${hour}h${min}m"
+	if {[regexp -- {[^a-zA-Z]?[0-9]m} $time min]} {
+		set min [string range $min 0 [expr [string length $min]-2]]
+		if {$min == ""} {set min 0}
+	} else {set min 0}
+	if {[regexp -- {[^a-zA-Z]?[0-9]h} $time hour]} {
+		set hour [string range $hour 0 [expr [string length $hour]-2]]
+		if {$hour == ""} {set hour 0}
+	} else {set hour 0}
+	if {[regexp -- {[^a-zA-Z]?[0-9]d} $time day]} {
+		set day [string range $day 0 [expr [string length $day]-2]]
+		if {$day == ""} {set day 0}
+	} else {set day 0}
+	return "${day}d${hour}h${min}m"
 }
 
 # in: n!u@h #chan -- WC Accepted
 #out: [nick [nick [...]]]
 proc mc:bw:inter:findchanuser {hostmask channel} {
- if {![validchan $channel]} {return -code error "no such channel record"} ; set buffer ""
- set hostmask [string tolower $hostmask]
- foreach user [chanlist $channel] {
-  if {[string match $hostmask [string tolower $user![getchanhost $user $channel]]]} {
-   lappend buffer $user
-  }
- }; return $buffer
+	if {![validchan $channel]} {
+		error "no such channel record"
+	}
+	set buffer ""
+	set hostmask [string tolower $hostmask]
+	foreach user [chanlist $channel] {
+		set uhost [getchanhost $user $channel]
+		if {[string match $hostmask [string tolower $user!$uhost]]} {
+			lappend buffer $user
+		}
+	}; return $buffer
 }
 
-# v1.1
+# v1.2  -- mc.moretools proc
 proc mc:bw:replace {text subs} {
 	if {![catch {string map -nocase $subs $text} output]} {return $output}
-	for {set i 0} {[lindex $subs $i] != ""} {incr i 2} {
-		set temp(re_syntax) {([\\\*\+\?\{\}\,\(\)\:\[\]\.\^\$\=\!\|])}
-		regsub -all -- $temp(re_syntax) [lindex $subs $i] {\\\1} temp(temp)
-		regsub -all -- $temp(temp) $text [lindex $subs [expr $i+1]] text
+	set temp(re_syntax) {([][\\\*\+\?\{\}\,\(\)\:\.\^\$\=\!\|])}
+	foreach {a b} $subs {
+		regsub -all -- $temp(re_syntax) $a {\\\1} a
+		regsub -all -- $a $text $b text
 	}; return $text
 }
 
-# v1.1
+# v1.1  -- mc.moretools proc
 proc mc:bw:strip:all {text} {
 	regsub -all -- {\002} $text "" text ;#bold
 	regsub -all -- {\003([0-9][0-9]?(,[0-9][0-9]?)?)?} $text "" text ;#color
@@ -1490,13 +1579,15 @@ proc mc:bw:strip:all {text} {
 	return $text
 }
 
-# v2.0
+# v3.0  -- mc.moretools proc
 proc mc:bw:chanflag {channel flag} {
- if {[lsearch -exact [string tolower [channel info $channel]] +[string tolower $flag]] == "-1"} {return 0}
- return 1
+	if {![catch {channel get $channel $flag} catch]} {return $catch}
+	set temp(1) [string tolower [channel info $channel]]
+	if {[lsearch -exact $temp(1) +[string tolower $flag]] >= "0"} {return 1}
+	return 0
 }
 
-# v1.3
+# v1.3  -- mc.moretools proc
 proc mc:bw:inter:masktype {nuhost type} {
 	set ident_max-length 9
 	set host_max-length 63
@@ -1659,6 +1750,17 @@ putlog "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 ##
 # HISTORY  ( <Fixed by> - [Found by] - <Info> )
 ##
+# v4.0.3 (07.09.02)
+#  MC_8 - tim - Fixed problem auto conversion of datafile v1.0 to v3.0.
+#               Bugzilla bug: 94
+#  MC_8 -     - Upgraded replace proc.  v1.1 -> v1.2
+#  MC_8 -     - Upgraded chanflag proc.  v2.0 -> v3.0
+#  MC_8 - tim - Upgraded error system, a user reported an error of the error
+#               system... witch means there was an legit error in the script but it
+#               couldn't debug it because of another error.  Hopefully we can use
+#               this new error catching system to track his bug down.  v2.0 -> v2.1
+#               Bugzilla bug: 114
+#
 # v4.0.2 (06.27.02)
 #  MC_8 - Schnups   - Fixed 'Tcl error [mc:bw:msgm]: invalid channel: &message'.
 #                     Bugzilla bug: 107
