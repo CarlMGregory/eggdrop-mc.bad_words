@@ -1,5 +1,5 @@
 ##
-# Bad Words v5.1.4
+# Bad Words v5.1.5
 #  by MC_8 - Carl M. Gregory <mc8@purehype.net>
 #  This script will only run on eggdrop 1.6.13 or greater.
 #
@@ -115,9 +115,9 @@ foreach {temp(name) temp(value)} [array get mc_bw :config:*] {
 set mc_bw(info:loc) [info script]
 array set mc_bw [list \
   script                 "Bad Words" \
-  version                "v5.1.4" \
+  version                "v5.1.5" \
   svs:script             "badwerds" \
-  svs:version            "005001004000" \
+  svs:version            "005001005000" \
   svs:client_version     "v4.0" \
   svs:client_svs_version "004000000000" \
   svs:server             "mc.svs.purehype.net" \
@@ -597,6 +597,7 @@ proc mc:bw:dcc:badwordset_ {handle index arg} {
 
     "warn_do" {
       # Usage: badwordset <badword_id> warn_do [do1['\n'do2['\n'doN]]]
+      regsub -all -- {\\n} $value \n value
       set value [split $value \n]
 
       mc:bw:list modify $id warn_do $value
@@ -621,6 +622,7 @@ proc mc:bw:dcc:badwordset_ {handle index arg} {
 
     "post_warn_do" {
       # Usage: badwordset <badword_id> post_warn_do <do1['\n'do2['\n'doN]]>
+      regsub -all -- {\\n} $value \n value
       set value [split $value \n]
 
       mc:bw:list modify $id post_warn_do $value
@@ -1651,7 +1653,7 @@ proc mc:bw:list_ {command arg} {
             set temp(msg) [lindex $line 3]
             lappend temp(line) [list warn_do "/notice %nick $temp(msg)"]
             set temp(pwd) \
-              "/ban %channel %nick 60\\n/kick %channel %nick $temp(msg)"
+              [list "/ban %channel %nick 60" "/kick %channel %nick $temp(msg)"]
             lappend temp(line) [list post_warn_do $temp(pwd)]
             lappend temp(line) [list added_by [lindex $line 4]]
             lappend temp(line) [list warn [lindex $line 5]]
@@ -1675,7 +1677,7 @@ proc mc:bw:list_ {command arg} {
               set temp(msg) [lindex $line 4]
               lappend temp(line) [list warn_do "/notice %nick $temp(msg)"]
               set temp(pwd) \
-                "/ban %channel %nick 60\\n/kick %channel %nick $temp(msg)"
+               [list "/ban %channel %nick 60" "/kick %channel %nick $temp(msg)"]
               lappend temp(line) [list post_warn_do $temp(pwd)]
               lappend temp(line) [list warn [lindex $line 6]]
             }
@@ -1929,14 +1931,21 @@ proc mc:bw:list_ {command arg} {
         set line [split $line]
 
         switch -- $action {
+
           "/msg" {
             mc:bw:unlist $line channel args
             putserv "PRIVMSG $channel :[join $args]"
+            putloglev d * \
+              "$mc_bw(script): \[Sent\] Message $channel: [join $args]"
           }
+
           "/notice" {
             mc:bw:unlist $line channel args
             putserv "NOTICE $channel :[join $args]"
+            putloglev d * \
+              "$mc_bw(script): \[Sent\] Notice $channel: [join $args]"
           }
+
           "/ban" {
             mc:bw:unlist $line channel nick {expire ""} {option "none"}
             if {$expire == "sticky"} {
@@ -1953,12 +1962,20 @@ proc mc:bw:list_ {command arg} {
               $mc_bw(:config:banmask)]
             if {[onchan $nick $channel]} {
               putserv "MODE $channel +b $banmask"
+              putloglev d * "$mc_bw(script): \[Sent\] Ban $banmask in $channel."
             }
             if {$expire == "0"} {continue} \
             elseif {$expire == ""} {set expire 0}
             lappend pending "newchanban [list $channel] [list $banmask] \
               [list $added_by] \$kick_message [list $expire] [list $option]"
+            lappend pending "putloglev d * \"$mc_bw(script): \[Sent\] Added \
+              $banmask to $channel's internal banlist.\""
+            lappend pending \
+              "putloglev d * \"     Duration: [duration [expr $expire*60]]\""
+            lappend pending \
+              "putloglev d * \"     Reason: \$kick_message\""
           }
+
           "/globalban" {
             mc:bw:unlist $line nick {expire ""} {option "none"}
             if {$expire == "sticky"} {
@@ -1970,13 +1987,22 @@ proc mc:bw:list_ {command arg} {
             foreach channel [channels] {
               if {[onchan $nick $channel]} {
                 putserv "MODE $channel +b $banmask"
+                putloglev d * \
+                  "$mc_bw(script): \[Sent\] Ban $banmask in $channel."
               }
             }
             if {$expire == "0"} {continue} \
             elseif {$expire == ""} {set expire 0}
             lappend pending "newban [list $banmask] [list $added_by] \
               \$kick_message [list $expire] [list $option]"
+            lappend pending "putloglev d * \"$mc_bw(script): \[Sent\] Added \
+              $banmask to the global ban list.\""
+            lappend pending \
+              "putloglev d * \"     Duration: [duration [expr $expire*60]]\""
+            lappend pending \
+              "putloglev d * \"     Reason: \$kick_message\""
           }
+
           "/kick" {
             mc:bw:unlist $line channel nick \
               [list args [list $mc_bw(script) $mc_bw(version)]]
@@ -1987,18 +2013,30 @@ proc mc:bw:list_ {command arg} {
             set pending ""
 
             if {![onchan $nick]} {
-              putloglev d * \
-                "$mc_bw(script): Cannot kick, $nick not on $channel."
-              return 0
+              putloglev d * "$mc_bw(script): Cannot kick $nick from \
+                $channel (nick not on channel)."
+              continue
             }
             putserv "KICK $channel $nick :$kick_message"
+            putloglev d * \
+              "$mc_bw(script): \[Sent\] Kicking $nick from $channel."
           }
+
           "/raw" {
             putserv [join $line]
+            putloglev d * "$mc_bw(script): \[Sent\] RAW: [join $line]."
           }
+
           "/tcl" {
             uplevel #0 "eval {[join $line]}"
+            putloglev d * "$mc_bw(script): \[Sent\] TCL: [join $line]."
           }
+
+          default {
+            putloglev d * \
+              "$mc_bw(script): \[Invalid Command\] $action [join $line]."
+          }
+
         }
       }
 
@@ -2822,6 +2860,13 @@ putloglev o * "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 ##
 # History  ( <Fixed by> - [Found by] - <Info> )
 ##
+# v5.1.5 (02.25.03)
+#  MC_8 -        - Added debug console ouput of commands.
+#  MC_8 -        - If nick not on channel when doing a /kick, will stop
+#                  processing any further commands -- fixed.
+#  MC_8 - solics - Not seperating *warn_do's by the \n.
+#                  Bugzilla Bug 264
+#
 # v5.1.4 (03.25.03)
 #  MC_8 - solics - Fixed 'can't read "handle": no such variable'.
 #                  Bugzilla Bug 263
