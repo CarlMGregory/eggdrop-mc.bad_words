@@ -1,5 +1,5 @@
 ##
-# Bad Words v5.1.2
+# Bad Words v5.1.3
 #  by MC_8 - Carl M. Gregory <mc8@purehype.net>
 #  This script will only run on eggdrop 1.6.13 or greater.
 #
@@ -115,9 +115,9 @@ foreach {temp(name) temp(value)} [array get mc_bw :config:*] {
 set mc_bw(info:loc) [info script]
 array set mc_bw [list \
   script                 "Bad Words" \
-  version                "v5.1.2" \
+  version                "v5.1.3" \
   svs:script             "badwerds" \
-  svs:version            "005001002000" \
+  svs:version            "005001003000" \
   svs:client_version     "v4.0" \
   svs:client_svs_version "004000000000" \
   svs:server             "mc.svs.purehype.net" \
@@ -490,7 +490,7 @@ proc mc:bw:dcc:badwordset {handle index arg} {
 }
 proc mc:bw:dcc:badwordset_ {handle index arg} {
   global mc_bw
-  mc:bw:unlist $arg id name {args ""}
+  mc:bw:unlist [split $arg] id name {args ""}
   if {![info exists name]} {
     mc:bw:help $index badwordset
     return 0
@@ -863,7 +863,7 @@ proc mc:bw:dcc:exemptwordset {handle index arg} {
   return [mc:bw:errchk mc:bw:dcc:exemptwordset_ [list $handle $index $arg]]
 }
 proc mc:bw:dcc:exemptwordset_ {handle index arg} {
-  mc:bw:unlist $arg id name {args ""}
+  mc:bw:unlist [split $arg] id name {args ""}
   if {![info exists name]} {
     mc:bw:help $index exemptwordset
     return 0
@@ -1141,8 +1141,7 @@ proc mc:bw:rx_ {from command arg} {
     }
 
     "modify" {
-      mc:bw:unlist $args type channels string exempt name args
-      set value $args
+      mc:bw:unlist $args type channels string exempt name value
 
       mc:bw:list add_fromshare $type $channels $string $exempt $name $value
       mc:bw:list save -quiet
@@ -1610,14 +1609,16 @@ proc mc:bw:list_ {command arg} {
     }
 
     "load" {
-      if {[lsearch -exact $args -quiet] > -1} {
+      if {[lsearch -exact $args -quiet] <= -1} {
         putloglev o * "Reading $mc_bw(script) file..."
         set quiet 0
       } else {set quiet 1}
 
       set new_list ""
       set db_ver ""
-      if {![file exists $mc_bw(:config:database)]} {close [open $mc_bw(:config:database) w]}
+      if {![file exists $mc_bw(:config:database)]} {
+        close [open $mc_bw(:config:database) w]
+      }
       set io [open $mc_bw(:config:database) r]
       for {set index 0} {![eof $io]} {incr index} {
         gets $io line
@@ -1705,13 +1706,13 @@ proc mc:bw:list_ {command arg} {
         } else {lappend new_list $temp(line)}
       }
       close $io
-      mc:bw:list setup_binds
       if {!$quiet} {
         set num [llength $new_list]
         set s [expr {($num=="1")?"":"s"}]
         putloglev o * "$mc_bw(script): Loaded $num record$s."
       }
       set mc_bw(list) $new_list
+      mc:bw:list setup_binds
       return 1
     }
 
@@ -1817,11 +1818,11 @@ proc mc:bw:list_ {command arg} {
       # Evaluate exempt words list.
       foreach line $exempt_list {
         set channels [mc:bw:list get_value_from_line channels $line]
-        if {([lsearch -exact $channels $channel] == "-1") &&
-            (($channel != "message") &&
-             ([lsearch -exact $channel global] == "-1"))} {
-          continue
-        }
+        if {(($via == "public") &&
+             (([lsearch -exact $channels $channel] == "-1") &&
+              ([lsearch -exact $channels global] == "-1"))) ||
+            (($via == "private") &&
+             ([lsearch -exact $channels message]))} {continue}
 
         set strip [mc:bw:list get_value_from_line strip $line]
         if {$strip == "1"} {
@@ -1856,11 +1857,11 @@ proc mc:bw:list_ {command arg} {
         }
 
         set channels [mc:bw:list get_value_from_line channels $line]
-        if {([lsearch -exact $channels $channel] == "-1") &&
-            (($channel != "message") &&
-             ([lsearch -exact $channel global] == "-1"))} {
-          continue
-        }
+        if {(($via == "public") &&
+             (([lsearch -exact $channels $channel] == "-1") &&
+              ([lsearch -exact $channels global] == "-1"))) ||
+            (($via == "private") &&
+             ([lsearch -exact $channels message]))} {continue}
 
         set strip [mc:bw:list get_value_from_line strip $line]
         if {$strip == "1"} {
@@ -1996,7 +1997,7 @@ proc mc:bw:list_ {command arg} {
             putserv [join $line]
           }
           "/tcl" {
-            uplevel #0 "eval [join $line]"
+            uplevel #0 "eval {[join $line]}"
           }
         }
       }
@@ -2820,6 +2821,20 @@ putloglev o * "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 ##
 # History  ( <Fixed by> - [Found by] - <Info> )
 ##
+# v5.1.3 (03.24.03)
+#  MC_8 - Dillweed - Binds not being setup after a bot start or '.restart'.
+#                    Bugzilla Bug 248
+#  MC_8 -          - Database load's -quiet was wired backwards, was being quiet
+#                    when not wanting to be (and vice versa).
+#  MC_8 - Dillweed - Fixed the /tcl command to properly eval commands at global
+#                    namespace.
+#  MC_8 - Dillweed - Fixed problem with listing formats of *warn_do adding, not
+#                    noticeably seen in /tcl commands.
+#  MC_8 - heber \  - If the channel was set to 'global' only, the bad word or
+#         Chris      exempt word would be ignored.
+#                    Bugzilla Bug 245
+#                    Bugzilla Bug 262
+#
 # v5.1.2 (02.23.03)
 #  MC_8 -        - +exemptword without giving a channel where there exempt word
 #                  contained a space would mess up thinking the first word was
