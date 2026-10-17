@@ -1,12 +1,12 @@
 ##
-# Bad Words v5.1.10
+# Bad Words v5.1.11
 #  by MC_8 - Carl M. Gregory <mc8@purehype.net>
 #  This script will only run on eggdrop 1.6.13 or greater.
 #
 #    R.I.P. Mom, To always be remembered; Nancy Marie Gregory.
 #
-# My Website - http://mc.purehype.net:81/
-# Have a bug?  http://mc.purehype.net:81/bugzilla/
+# My Website - http://mc.purehype.net/
+# Have a bug?  http://mc.purehype.net/bugzilla/
 ##
 
 ##
@@ -114,9 +114,9 @@ foreach {temp(name) temp(value)} [array get mc_bw :config:*] {
 set mc_bw(info:loc) [info script]
 array set mc_bw [list \
   script                 "Bad Words" \
-  version                "v5.1.10" \
+  version                "v5.1.11" \
   svs:script             "badwerds" \
-  svs:version            "005001010000" \
+  svs:version            "005001011000" \
   svs:client_version     "v4.0" \
   svs:client_svs_version "004000000000" \
   svs:server             "mc.svs.purehype.net" \
@@ -452,7 +452,10 @@ proc mc:bw:dcc:badwords_ {handle index arg} {
       if {$item == ""} {continue}
       lappend temp(2) $item
     }
-    set temp(1) [string totitle [join $temp(2) ", "]]
+    set temp(1) [join $temp(2) ", "]
+    set temp(1-0) [string toupper [string index $temp(1) 0]]
+    set temp(1-1) [string tolower [string range $temp(1) 1 end]]
+    set temp(1) $temp(1-0)$temp(1-1)
 
     putdcc $index \
       [format { [%3s] %s (%s)} $temp(line:id) $temp(line:string) $expire]
@@ -851,8 +854,11 @@ proc mc:bw:dcc:exemptwords_ {handle index arg} {
       if {$item == ""} {continue}
       lappend temp(2) $item
     }
-    set temp(1) [string totitle [join $temp(2) ", "]]
-
+    set temp(1) [join $temp(2) ", "]
+    set temp(1-0) [string toupper [string index $temp(1) 0]]
+    set temp(1-1) [string tolower [string range $temp(1) 1 end]]
+    set temp(1) $temp(1-0)$temp(1-1)
+    
     putdcc $index \
       [format { [%3s] %s (%s)} $temp(line:id) $temp(line:string) $expire]
     if {$temp(1) != ""} {
@@ -1252,7 +1258,7 @@ proc mc:bw:list_ {command arg} {
   if {![info exists mc_bw(list)]} {set mc_bw(list) ""}
 
   if {[info tclversion] > 8.0} {
-    set temp(newarg) ""
+    set temp(newarg) [list]
     foreach temp(item) $arg {
       lappend temp(newarg) [encoding convertto [encoding system] $temp(item)]
     }; set args $temp(newarg)
@@ -1760,8 +1766,8 @@ proc mc:bw:list_ {command arg} {
         }
       }
       if {$wide_bind} {
-        # If any badword has 'global' as the channel, or uses regular
-        # expressions then I have to bind it wide.
+        # If any badword has 'global' as the channel, uses mIRC control code
+        # stripping, or uses regular expressions then I have to bind it wide.
         mc:bw:list bind pubm - * mc:bw:pubm rebind
         mc:bw:list bind notc - * mc:bw:notc rebind
         mc:bw:list bind msgm - * mc:bw:msgm rebind
@@ -2159,7 +2165,7 @@ proc mc:bw:help {index name} {
     set temp(help) \
 "$mc_bw(script) $mc_bw(version)
   by MC_8 - Carl M. Gregory <mc8@purehype.net>
-  This script will only run on eggdrop 1.5.5 or greater.
+  This script will only run on eggdrop 1.6.13 or greater.
 
     R.I.P. Mom, To always be remembered; Nancy Marie Gregory.
 
@@ -3062,7 +3068,12 @@ putloglev o * "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 ##
 # History  ( <Fixed by> - [Found by] - <Info> )
 ##
-# v5.1.10 (04.19.03) <not released>
+# v5.1.11 (06.08.03)
+#  MC_8 - none - Fixed 'bad option "totitle": must be compare, first, index,
+#                last, length, match, range, tolower, toupper, trim, trimleft,
+#                trimright, wordend, or wordstart'.
+#
+# v5.1.10 (04.19.03)
 #  MC_8 - Chris - Added auto conversion on process_message if detection of a \n
 #                 in *warn_do's, happens when someone manually edits the
 #                 datafile incorrectly.
