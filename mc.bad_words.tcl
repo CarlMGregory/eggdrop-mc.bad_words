@@ -1,5 +1,5 @@
 ##
-# Bad Words v5.1.11
+# Bad Words v5.1.12
 #  by MC_8 - Carl M. Gregory <mc8@purehype.net>
 #  This script will only run on eggdrop 1.6.13 or greater.
 #
@@ -86,15 +86,15 @@ set mc_bw(:config:share:key) "BlaBlaBlaBla"
 # Where do you want to store the data this script will accumulate?
 set mc_bw(:config:database) "./.badwords.dat"
 
-
-## SVS Client (Script Version Service) v4.0 ##
+## SVS Client (Script Version Service) v4.0.4 ##
 # Once a day, the SVS Client will connect to MC_8's SVS Server to determine if
 # there is a newer version of this script available.  If a newer version is
 # found, the script will be auto updated.
 
-# [0=no/1=yes] Do you want to enable auto updating?
+# [0=no/1=yes] Do you want to enable auto updating?  If you chose to disable
+# auto updating, it will not automatically update the script upon finding a
+# newer version.
 set mc_bw(:config:svs:enable) 1
-
 
 #
 ##
@@ -114,9 +114,9 @@ foreach {temp(name) temp(value)} [array get mc_bw :config:*] {
 set mc_bw(info:loc) [info script]
 array set mc_bw [list \
   script                 "Bad Words" \
-  version                "v5.1.11" \
+  version                "v5.1.12" \
   svs:script             "badwerds" \
-  svs:version            "005001011000" \
+  svs:version            "005001012000" \
   svs:client_version     "v4.0" \
   svs:client_svs_version "004000000000" \
   svs:server             "mc.svs.purehype.net" \
@@ -126,11 +126,15 @@ set mc_bw(svs:query)    "svs=$mc_bw(svs:script)&"
 append mc_bw(svs:query) "version=$mc_bw(svs:version)&"
 append mc_bw(svs:query) "svs_version=$mc_bw(svs:client_svs_version)"
 
-if {![info exists numversion] || ($numversion < "1061300")} {
+if {![info exists numversion] || 
+    ([string range $numversion 0 4] < "10613") ||
+    (([string range $numversion 0 4] == "10613") &&
+     ([string range $numversion 5 6] != "00"))} {
   set temp(tag) "$mc_bw(script) $mc_bw(version)"
- putloglev o * "$temp(tag) by MC_8 will only work on eggdrop 1.6.13 or greater."
- putloglev o * "$temp(tag)  will not work with eggdrop $version."
- putloglev o * "$temp(tag)  not loaded."
+  putloglev o * \
+    "$temp(tag) by MC_8 will only work on eggdrop 1.6.13 (stable) or greater."
+  putloglev o * "$temp(tag)  will not work with eggdrop $version."
+  putloglev o * "$temp(tag)  not loaded."
   return 1
 }
 
@@ -165,7 +169,7 @@ if {$mc_bw(:config:share:key) == ""} {
 }
 #
 
-# Error system, v3.0
+# Error system, v3.1
 proc mc:bw:error {command error arg} {
   global mc_bw version lastbind errorInfo
   putloglev o * "Error in script $mc_bw(script) $mc_bw(version)."
@@ -181,13 +185,16 @@ proc mc:bw:error {command error arg} {
   putloglev o * "  TCL Patchlevel: [info patchlevel]"
   putloglev o * "*** Please submit this bug so MC_8 can fix it.  Visit"
   putloglev o * \
-    "*** http://mc.purehype.net:81/bugzilla/ to properly report the bug."
+    "*** http://mc.purehype.net/bugzilla/ to properly report the bug."
   putloglev o * \
     "*** Please include ALL info. in the bug report, including the next(s)."
   error $errorInfo
 }
 
 proc mc:bw:errchk {command arg} {
+  lappend ::lastCommand "$command $arg"
+  set ::lastCommand\
+    [lrange $::lastCommand [expr [llength $::lastCommand]-5] end]
   if {![catch {eval $command $arg} return]} {return $return}
   mc:bw:error $command $return $arg
   return 0
@@ -2052,13 +2059,14 @@ proc mc:bw:list_ {command arg} {
             elseif {$expire == ""} {set expire 0}
             lappend pending "newchanban [list $channel_] [list $banmask] \
               [list $added_by] \$kick_message [list $expire] [list $option]"
-            set temp(msg) "\\\[Sent\\\] Added $banmask to $channel_'s internal"
+            set temp(msg) "\\\[Sent\\\] Added [mc:bw:filter -tcl $banmask]"
+            append temp(msg) " to [mc:bw:filter -tcl $channel_]'s internal"
             append temp(msg) " banlist."
             lappend pending "putloglev d * \"$mc_bw(script): $temp(msg)\""
             lappend pending \
-              "putloglev d * \"     Duration: [duration [expr $expire*60]]\""
+              "putloglev d * \"  Duration: [duration [expr $expire*60]]\""
             lappend pending \
-              "putloglev d * \"     Reason: \$kick_message\""
+              "putloglev d * \"  Reason: \$kick_message\""
           }
 
           "/globalban" {
@@ -2097,13 +2105,13 @@ proc mc:bw:list_ {command arg} {
             elseif {$expire == ""} {set expire 0}
             lappend pending "newban [list $banmask] [list $added_by] \
               \$kick_message [list $expire] [list $option]"
-            set temp(msg) "\\\[Sent\\\] Added $banmask to the global ban"
-            append temp(msg) " list."
+            set temp(msg) "\\\[Sent\\\] Added [mc:bw:filter -tcl $banmask]"
+            append temp(msg) " to the global ban list."
             lappend pending "putloglev d * \"$mc_bw(script): $temp(msg)\""
             lappend pending \
-              "putloglev d * \"     Duration: [duration [expr $expire*60]]\""
+              "putloglev d * \"  Duration: [duration [expr $expire*60]]\""
             lappend pending \
-              "putloglev d * \"     Reason: \$kick_message\""
+              "putloglev d * \"  Reason: \$kick_message\""
           }
 
           "/kick" {
@@ -2909,6 +2917,38 @@ proc mc:bw:unlist {{args ""}} {
   }; return $index
 }
 
+# filter [switch] <text>
+#     version:
+#       v3.0
+proc mc:bw:filter {{args ""}} {
+  mc:bw:badargs $args 1 2 "?switch? text"
+
+  set switches ""
+  set valid [join "-regexp -tcl {or --}" ", "]
+  for {set i 0} {
+    [string match -* [set arg [lindex $args $i]]]
+  } {incr i; break} {
+    if {![regexp -- {^-(regexp|tcl|-)$} $arg -> switch]} {
+      error "bad switch \"$arg\": must be $valid"
+    }
+    if {$switch == "-"} {
+      incr i
+      break
+    }; lappend switches $switch
+  }
+  set switch [expr {($switches == "")?"tcl":[lindex $switches 0]}]
+  set text [lindex $args $i]
+
+  switch -- $switch {
+    tcl {set re_syntax {([][\\\{\}\"])}}
+    regexp {set re_syntax {([][\\*+?{},():.^$=!|])}}
+    default {error "bad switch \"$switch\":  must be $valid"}
+  }
+  regsub -all -- $re_syntax $text {\\\1} text
+
+  return $text
+}
+
 ## End of More Tools quick procs.
 
 
@@ -2923,15 +2963,19 @@ proc mc:bw:do_svs {{args ""}} {
   global mc_bw
   set query $mc_bw(svs:query)
   if {$args == ""} {append query "&log=0"}
-  set index [connect $mc_bw(svs:server) $mc_bw(svs:port)]
-  putdcc $index "GET $mc_bw(svs:get)?$query HTTP/1.0\n"
-  putdcc $index "Host: $mc_bw(svs:server):$mc_bw(svs:port)\n\n"
-  control $index mc:bw:svs_talk
+  if {[catch {connect $mc_bw(svs:server) $mc_bw(svs:port)} ind]} {
+    set temp(1) "SVS problem connecting to $mc_bw(svs:server)"
+    set temp(2) "on port $mc_bw(svs:port)"
+    putloglev d * "$mc_bw(script): $temp(1) $temp(2):  $ind"
+    return 0
+  }
+  putdcc $ind "GET $mc_bw(svs:get)?$query HTTP/1.0\n"
+  putdcc $ind "Host: $mc_bw(svs:server):$mc_bw(svs:port)\n\n"
+  control $ind mc:bw:svs_talk
 }
 
 proc mc:bw:svs_talk {index text} {
   global mc_bw
-
   set header [list svs header $index]
   set memory [list svs memory $index]
   if {$text == ""} {
@@ -2996,7 +3040,21 @@ proc mc:bw:svs_talk {index text} {
               puts $io [list set mc_bw($name) $item_value]
               if {$type == "\{"} {
                 while {1} {
-                  if {[regexp -- {[^\\]\}(?:;? *(.*))?} $line -> extra]} {
+                  if {[regexp -- {\}(?:[; ][; ]*(.*))?} $line -> extra]} {
+                    if {$extra != ""} {
+                      puts $io $extra
+                    }
+                    break
+                  }
+                  incr i
+                  set line [lindex $mc_bw($memory) $i]
+                }
+                puts $io ""
+              } elseif {$type == "\""} {
+                regsub -- {"} $line "" line
+                while {1} {
+                  if {[regexp -- {[^\\]"(?:[; ][; ]*(.*))?} $line -> extra] ||
+                      [regexp -- {^"(?:[; ][; ]*(.*))?} $line -> extra]} {
                     if {$extra != ""} {
                       puts $io $extra
                     }
@@ -3017,15 +3075,16 @@ proc mc:bw:svs_talk {index text} {
         close $io
         set file $mc_bw(info:loc)
         putloglev o * "$mc_bw(script): Auto update testing new script..."
-        if {[catch {uplevel #0 "source $file~new"} error]} {
+        if {[catch {uplevel "source $file~new"} error]} {
           file delete -force -- $file~new
           putloglev o * "$mc_bw(script): Auto update failed: $error"
+          putloglev o * $::errorInfo
           putloglev o * "$mc_bw(script): Auto update loading previous script."
-          uplevel #0 "source $file"
+          uplevel "source $file"
         } else {
           file rename -force -- $file~new $file
           putloglev o * "$mc_bw(script): Auto update test good, reloading."
-          uplevel #0 "source $file"
+          uplevel "source $file"
         }
       }
 
@@ -3068,6 +3127,16 @@ putloglev o * "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 ##
 # History  ( <Fixed by> - [Found by] - <Info> )
 ##
+# v5.1.12 (07.30.03)
+#  MC_8 - - Upgraded ECS (Error Catching System).  v3.0 -> v3.1
+#  MC_8 - - Upgraded SVS client.  v4.0 -> v4.0.4
+#  MC_8 - - Fixed 'invalid command name "*"'.  This is a major security risk.
+#           If a user has an ident that contains tcl formatting (such as
+#           [<command>]), and he/she matches a badword, and that badword calls a
+#           /ban or /globalban -- then the command will be executed (or error
+#           out due to invalid command).
+#           Bugzilla Bug 323 
+#
 # v5.1.11 (06.08.03)
 #  MC_8 - none - Fixed 'bad option "totitle": must be compare, first, index,
 #                last, length, match, range, tolower, toupper, trim, trimleft,
