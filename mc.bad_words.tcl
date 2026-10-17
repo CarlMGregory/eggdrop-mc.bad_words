@@ -1,6 +1,10 @@
 ##
-#  BadWerds v1.11 by (Carl M. Gregory) MC_8 <gregory@worldinter.net>
-#                                          !e`mail me bug reports!
+# BadWerds v2.0 by (Carl M. Gregory) MC_8 <gregory@worldinter.net>
+#
+# If you have any questions/comments/idea's, please email me!
+# ( Include the script name and version in the title, if you do email me. )
+#
+# My SVS Website - http://mc.purehype.net/
 ##
 
 ##
@@ -13,6 +17,21 @@
 
 ##
 # HISTORY
+##
+# v2.0 (06.27.01)
+#  MC_8 - Sara - Added a few examples within the command syntax layout.
+#  MC_8 - ICU - Fixed +/-badword dcc command requirment for the *bad*word*.
+#  MC_8 - Rami - Fixed `Tcl error [mc:msgm:weed]: wrong # args: should be
+#                "foreach varList list ?varList list ...? command"`
+#  MC_8 - KatzEye - Added ability to have perm bans, insted of timed bans.
+#  MC_8 - KatzEye - Added ability to have the ban's global or channel specific.
+#  MC_8 - Updated SVS to v1.2
+#  MC_8 - Made the badword strings settable via dcc (on the fly) rather than
+#         editing them within the script.
+#
+# v1.11 (01.31.01)
+#  (( Opps, forgot to log history changes for this version. ))
+#
 # v1.10.1 (02.01.01)
 #  MC_8 - Added SVS
 #  MC_8 - Lawrence - Added warn_mode, to change user modes upon
@@ -74,154 +93,96 @@
 #  MC_8 - Inital release - unknown (I didn't keep track I guess)
 ##
 
-# Set this to the BAD words you don't want said by. 
-# Wildcards NEEDED, if your bad word contain spaces... "quote it"!
-# You can add as many channels as you would like (ie: set badwerds(#channel) { .. })
-# If you want a bad word for ALL channels
-# your bot is on, add it like this: 
-# set badwerds(global) {
-#  *badword*
-#  "*anoter badword*"
-# }
-# look at the one I set below to get an idea :)
-set badwerds(global) {
- *I love #chatzone*
-}
+##
+# COMMANDS (dcc)
+##
+# +badword [<#>channel|<&>message|<&>global] <*bad*string*>
+#  This will add a bad word string, such as "*every*goto*http://*".
+#  EXAMPLES: .+badword #eggdrop *i*want*free*shell*
+#            This will add *i*want*free*shell* to #eggdrop's badword list.
+#            .+badword *MC_8*sucks*
+#            This will add *MC_8*sucks* to the global badword list.
+#            .+badword &global *MC_8*sucks*
+#            This will add *MC_8*sucks* to the global badword list as well.
+#
+# -badword [<#>channel|<&>message|<&>global] <*bad*string*>
+#  This will remove a bad word string.
+#
+# badwords [<#>channel|message|global|all]
+#  This will view bad word strings.
+#
+# These 3 commands are done in dcc chat with the eggdrop, and do require
+# the "." (period) prefix.
+##
 
-set badwerds(message) {
-}
+##
+# Settings
+##
+#
 
-set badwerds(#warez4free) {
- *irc://*
- *.htm*
- *www.*
- *h??p:/*
- *.to/*
- *.at/*
- *join #*
- *join ch*
- *com*#*
- *h ? ? p :*
- *channel*#*
- * /server*
-}
+# What flaged users should only be allowed to perform the dcc commands?
+# Flag format:  <global>|<channel>
+set mc_bw(access) "+m|+m"
 
-set badwerds(#mp34free) {
- *irc://*
- *.htm*
- *www.*
- *h??p:/*
- *.to/*
- *.at/*
- *join #*
- *join ch*
- *com*#*
- *h ? ? p :*
- *channel*#*
- * /server*
-}
-
-set badwerds(#warez4warez) {
- *irc://*
- *.htm*
- *www.*
- *h??p:/*
- *.to/*
- *.at/*
- *join #*
- *join ch*
- *com*#*
- *h ? ? p :*
- *channel*#*
- * /server*
-}
-
-set badwerds(#wareznorth) {
- *irc://*
- *.htm*
- *www.*
- *h??p:/*
- *.to/*
- *.at/*
- *join #*
- *join ch*
- *com*#*
- *h ? ? p :*
- *channel*#*
- * /server*
- !list
- !search *
- @find *
- !find *
- @locator *
-}
-
-set badwerds(#chatzone) {
- *fuck*
- *sex*
- *ass*
- *pussy*
- *slut*
- *trick*
- *bitch*
- *nigger*
- *nigga*
- *fuk*
- *shit*
- *azz*
- *dick*
- *cunt*
- *hail hitler*
-}
+# The script will hold bad words information in a database file, what do
+# you want to call this database file?
+set mc_bw(database) .badwords.dat
 
 # This is the ban time (in MIN.s)
-#  set this to 0 to not add a ban in bot's banlist, just put a ban on the server (|hellman|)
-#  set to anything greater than 0 for actuall bot's ban time.
-#  set to -1 to turn off banning (MC_8)
+#  -2 = PERM ban (no expiration in bot records)
+#  -1 = Will not ban.
+#   0 = Performs a server ban, but doesn't store the ban in the bot's ban list.
+#  Any number greater than 0 will be the time in witch the ban will expire.
+#  All ban's will be channel ban's, if you want it to be a global ban -- put
+#  a "@" infront of the time.  Ie. set mc_time @1440
 set mc_time 1440
 
-# How many warnings do you want to give the person?  0 = no warnings (du hu :P~)
+# How many warnings do you want to give the person?
+#  0 = no warnings
 set bwerd(warn) 1
 
-# What do you want to say on the warning message? (( %match == *the badwerd* ))
-set bwerd(warn_msg) "This is a warning, watch what you say.) (%match"
+# What do you want to say on the warning message?
+# Replacment veriables:
+#  %match == The *ban*string* that was triged by the user.
+set bwerd(warn_msg) "This is a warning, watch what you say.   %match"
 
-# [0=no/1=yes] upon warning, do you want to kick em too?
+# [0=no/1=yes] Upon warning, do you want to kick the user too?
 set bwerd(warn_kick) 0
 
-# What modes to you want to change on the user upon warning?
-# If the channel is moderated, insted of kicking the person you can just -v him.
-# Set this to "" to disable.
+# Upon warning, what modes to you want to change?
+# Example:  If the channel is moderated, insted of kicking the person
+#           you can just -v him (removing his voice to speak in the channel).
+# To disable this feature, set this to "".
 set bwerd(warn_mode) ""
 
-# Set this to the flag the person is required to have
-# i.e.: let's say someone is supposed to be a voicer, but someone forgot to voice him?? 
-#       you don't want to kick that person just cuz of that!
-# set it to "-" for any user in database, or specify the certing flag required... "mno" is 
-# master,owner,op .. this goes with the new flag system
-# set to "" to turn this feature off.
+# What flaged users are exempt from this script?
+# Set this setting to "" to exempt no one from this script.
+# Flag format:  <global>|<channel>
 set mc_flags "ov|ov"
 
-# Set this to the kick message you want to show.
-set mc_warning "You should really watch what you say.) (%match"
+# Upon warning, if you set the script to kick, what kick message
+# do you want to show?
+set mc_warning "You should really watch what you say.  You were warned already!   %match"
 
-# [0=no/1=yes] do you want it to kick op's of the room?
+# [0=no/1=yes] Do you want the script to kick channel op's?
 set bwerd(kickops) 0
 
-# [0=no/1=yes] do you want it to kick voiced ppl in the room?
+# [0=no/1=yes] Do you want the script to kick voiced users?
 set bwerd(kickvoice) 0
 
-# [0=no/1=yes] Do you want to process MSGs as they were channel text, to be evaluated
-#              by channel bad werds list.
+# [0=no/1=yes] Do you want to process messages as if they were channel
+#  text, to be evaluated by channel bad werds list?
 set bwerd(procmsg) 0
 
-# [0=no/1=yes] do you want to strip color/bold/uline/rev. characters from test?
-#  example: some ppl get past the kick/ban by .. puting this www.something.net
-#           on mirc, that shows up as www.something.net, normal, but to the bot it's 
-#           NOT *www.*, it's *www.*
+# [0=no/1=yes] Do you want to strip color/bold/underline/reverse characters
+#  from the public text before evaluating?
+#  example: Some users get past the kick/ban by puting doing www.something.net
+#           on mIRC.  That shows up as www.something.net to the human eye on
+#           an mIRC client, but to the bot it's NOT *www.*, it's *www.*.
 set bwerd(strip) 1
 
-# How do you want it to mask a ban?  Default == 2
+# Upon issuing a ban, how do you want it to mask the ban?
+#  Default == 2
 #      0 - *!user@host.domain
 #      1 - *!*user@host.domain
 #      2 - *!*@host.domain
@@ -237,7 +198,7 @@ set bwerd(strip) 1
 #     wildcards to replace the numbers in the address.
 set bad_mask 11
 
-## MC SVS (Script Version Server) v1.1 ##
+## MC SVS (Script Version Service) v1.2 ##
 # Do you want the bot to connection to MC_8's SVS to see if there are newer versions
 # of this script avilable?  It will only tell you -- It's up to you to get the newest
 # version (I decided not to auto update the code, there may be new features in the
@@ -255,16 +216,223 @@ set mc_bw(svs:enabled) 1
 set mc_bw(svs:check) 3
 
 # Upon finding a newer version, who do you want to notify via note?
+# Only the admin of the bot should really be worried about these notes,
+# there the ones that keep everything up to par on the bots.
 # Seperate each user with a " " (space).
 set mc_bw(svs:notify) "MC_8"
 
+# Do you want even beta version notified to whomever you have set?  Or just
+# stable releases of the script?
+#  0 = Tell me about all version, even beta versions.
+#  1 = Just tell me about new stable versions.
+set mc_bw(svs:stableonly) 0
 
 
-## Coding below.
 
-set badwerds(version) v1.11
-set mc_bw(svs:script) "badwerds 001011000000"
+
+## Coding below, do not proceed -- you are done with the settings.
+
+set mc_bw(version) v2.0
+set mc_bw(svs:script) "badwerds 002000000000"
 set mc_bw(svs:server) "mc.purehype.net 8085"
+
+bind dcc - +badwords *mc:bw:dcc:+badword
+bind dcc - +badwerds *mc:bw:dcc:+badword
+proc *mc:bw:dcc:+badword {hand idx args} {
+ global badwerds mc_bw
+ set args [join $args];set chan ""
+ if {[string index [lindex $args 0] 0] == "#"} {
+  set chan "[string tolower [lindex $args 0]]"
+  set string *[join [join [split [lrange [mc:bw:filt $args] 1 e] *]] *]*
+ } elseif {[string index [lindex $args 0] 0] == "&"} {
+  if {[string range [string tolower [lindex $args 0]] 1 e] == "message"} {
+   set chan "&message"
+   set string *[join [join [split [lrange [mc:bw:filt $args] 1 e] *]] *]*
+  } elseif {[string range [string tolower [lindex $args 0]] 1 e] == "global"} {
+   set chan "&global"
+   set string *[join [join [split [lrange [mc:bw:filt $args] 1 e] *]] *]*
+  }
+ }
+ if {$chan == ""} {
+  set chan "&[string tolower [lindex [console $idx] 0]]"
+  if {$chan == "&*"} {set chan "&global"} {set chan [string range $chan 1 e]}
+  set string *[join [join [split [lrange [mc:bw:filt $args] 0 e] *]] *]*
+ }
+ if {[join $string] == "**"} {
+  putdcc $idx "Usage: +badword \[<#>channel|<&>message|<&>global\] <*bad*string*>"
+  return 0
+ }
+ if {(![validchan $chan]) && ([string index $chan 0] != "&")} {
+  putdcc $idx "That channel, $chan, doesn't exist!"
+  return 0
+ }
+ set args "$chan $string"
+ if {[string index $chan 0] == "&"} {
+  set argsnoand "[string range $chan 1 e] $string"
+  set temp_access [lindex [split $mc_bw(access) |] 0]
+  set access [matchattr $hand $temp_access]
+ } {
+  set argsnoand "$chan $string"
+  set access [matchattr $hand $mc_bw(access) $chan]
+ }
+ if {!$access} {
+  putdcc $idx "Access Denied"
+  putcmdlog "#$hand# Denied (no access): +badword $argsnoand"
+  return 0
+ }
+ if {![file exists $mc_bw(database)]} {close [open $mc_bw(database) w]}
+ set io [open $mc_bw(database) r]
+ while {![eof $io]} {
+  set gets [gets $io]
+  if {$gets == $argsnoand} {
+   putdcc $idx "That infomation already exists."
+   return 0
+  }
+ };close $io
+ set io [open $mc_bw(database) a];puts $io $argsnoand;close $io
+ if {![info exists badwerds([lindex $argsnoand 0])]} {set badwerds([lindex $argsnoand 0]) ""}
+ set badwerds([lindex $argsnoand 0]) "$badwerds([lindex $argsnoand 0]) {[lrange $argsnoand 1 e]}"
+ set badwerds([lindex $argsnoand 0]) [string trim $badwerds([lindex $argsnoand 0])]
+ if {[string index $chan 0] == "#"} {set x "$chan'"} {
+  switch -- $chan {
+   &global {set x "the global"}
+   &message {set x "messages"}
+  }
+ }
+ putdcc $idx "Added `$string` badword to $x badwords list."
+ putcmdlog "#$hand# +badword $argsnoand"
+ return 0
+}
+
+bind dcc - -badwords *mc:bw:dcc:-badword
+bind dcc - -badwerds *mc:bw:dcc:-badword
+proc *mc:bw:dcc:-badword {hand idx args} {
+ global badwerds mc_bw
+ set args [join $args];set chan ""
+ if {[string index [lindex $args 0] 0] == "#"} {
+  set chan "[string tolower [lindex $args 0]]"
+  set string [lrange $args 1 e]
+ } elseif {[string index [lindex $args 0] 0] == "&"} {
+  if {[string range [string tolower [lindex $args 0]] 1 e] == "message"} {
+   set chan "&message"
+   set string [lrange $args 1 e]
+  } elseif {[string range [string tolower [lindex $args 0]] 1 e] == "global"} {
+   set chan "&global"
+   set string [lrange $args 1 e]
+  }
+ }
+ if {$chan == ""} {
+  set chan "&[string tolower [lindex [console $idx] 0]]"
+  if {$chan == "&*"} {set chan "&global"} {set chan [string range $chan 1 e]}
+  set string [lrange $args 0 e]
+ }
+ if {[join $string] == "**"} {
+  putdcc $idx "Usage: -badword \[<#>channel|<&>message|<&>global\] <*bad*string*>"
+  return 0
+ }
+ if {(![validchan $chan]) && ([string index $chan 0] != "&")} {
+  putdcc $idx "That channel, $chan, doesn't exist!"
+  return 0
+ }
+ if {[string index $chan 0] == "&"} {
+  set argsnoand "[string range $chan 1 e] $string"
+  set temp_access [lindex [split $mc_bw(access) |] 0]
+  set access [matchattr $hand $temp_access]
+ } {
+  set argsnoand "$chan $string"
+  set access [matchattr $hand $mc_bw(access) $chan]
+ }
+ if {!$access} {
+  putdcc $idx "Access Denied"
+  putcmdlog "#$hand# Denied (no access): -badword $argsnoand"
+  return 0
+ }
+ if {![file exists $mc_bw(database)]} {close [open $mc_bw(database) w]}
+ set io [open $mc_bw(database) r];set temp "";set found 0
+ while {![eof $io]} {
+  set gets [gets $io]
+  if {$gets == $argsnoand} {set found 1;continue}
+  set temp "$temp {$gets}"
+ };close $io
+ if {!$found} {
+  putdcc $idx "That infomation does not exists."
+  return 0
+ };set temp [string trim $temp]
+ set io [open $mc_bw(database) w];set temp_2 ""
+ foreach out $temp {
+  if {[lindex $argsnoand 0] == [lindex $out 0]} {
+   set temp_2 "$temp_2 {[lrange $out 1 e]}"
+  };puts $io $out
+ };close $io;set temp_2 [string trim $temp_2]
+ set badwerds([lindex $argsnoand 0]) "$temp_2"
+ if {[string index $chan 0] == "#"} {set x "$chan's"} {
+  switch -- $chan {
+   &global {set x "the global"}
+   &message {set x "messages"}
+  }
+ }
+ putdcc $idx "Removed `$string` badword from $x badwords list."
+ putcmdlog "#$hand# -badword $argsnoand"
+ return 0
+}
+
+bind dcc - badwords *mc:bw:dcc:badword
+bind dcc - badwerds *mc:bw:dcc:badword
+proc *mc:bw:dcc:badword {hand idx args} {
+ global badwerds mc_bw
+ set args [join $args]
+ if {[string index [lindex $args 0] 0] == "#"} {
+  set chan "[string tolower [lindex $args 0]]"
+ } elseif {[string tolower [lindex $args 0]] == "message"} {
+   set chan "message"
+ } elseif {[string tolower [lindex $args 0]] == "global"} {
+   set chan "global"
+ } elseif {[string tolower [lindex $args 0]] == "all"} {
+  set chan "all"
+ } elseif {[join [lindex $args 0]] == ""} {set chan ""} else {
+  putdcc $idx "Usage: badwords \[<#>channel|message|global|all\]"
+  return 0
+ }
+ if {$chan == ""} {
+  set chan "[string tolower [lindex [console $idx] 0]]"
+  if {$chan == "*"} {set chan "all"}
+ }
+ set args "$chan"
+ if {[string index $chan 0] != "#"} {
+  set temp_access [lindex [split $mc_bw(access) |] 0]
+  set access [matchattr $hand $temp_access]
+ } {set access [matchattr $hand $mc_bw(access) $chan]}
+ if {!$access} {
+  putdcc $idx "Access Denied"
+  putcmdlog "#$hand# Denied (no access): +badword $argsnoand"
+  return 0
+ }
+ if {![file exists $mc_bw(database)]} {close [open $mc_bw(database) w]}
+ set io [open $mc_bw(database) r];set found 0
+ while {![eof $io]} {
+  set gets [gets $io]
+  if {(([lindex $gets 0] == $chan) ||
+      ($chan == "all")) && ([join $gets] != "")} {putdcc $idx "$gets";incr found 1}
+ };close $io
+ putdcc $idx ""
+ if {$found == "1"} {set s ""} {set s "'s"}
+ putdcc $idx "Found $found badword$s for $chan."
+ putcmdlog "#$hand# badwords $chan"
+ return 0
+}
+
+proc mc:bw:load_database {} {
+ global mc_bw badwerds
+ if {![file exists $mc_bw(database)]} {close [open $mc_bw(database) w]}
+ set io [open $mc_bw(database) r]
+ while {![eof $io]} {
+  set gets [gets $io]
+  if {[join $gets] == ""} {continue}
+  if {![info exists badwerds([lindex $gets 0])]} {set badwerds([lindex $gets 0]) ""}
+  set badwerds([lindex $gets 0]) "$badwerds([lindex $gets 0]) {[lrange $gets 1 e]}"
+  set badwerds([lindex $gets 0]) [string trim $badwerds([lindex $gets 0])]
+ };close $io
+};mc:bw:load_database
 
 proc mc:weed {nick uhost hand chan args} {
  global botnick badwerds mc_time mc_flags mc_warning bwerd bad_mask
@@ -283,7 +451,7 @@ proc mc:weed {nick uhost hand chan args} {
   }
  }
  foreach chant $chanz {
-  foreach bad1 [split $badwerds($chant) \n] {
+  foreach bad1 $badwerds($chant) {
    if {[set bad1 [string trim $bad1 "\" "]] == ""} {continue}
    if {[string match [string tolower $bad1] [string tolower $args]]} {
     if {[mc:bwerd:warn $nick $uhost $bad1]} {
@@ -293,13 +461,38 @@ proc mc:weed {nick uhost hand chan args} {
      } ; putlog "$nick was warned for saying $bad1 in $chan" ; break
     }
     set ban [mc:bwerds:masktype $nick!$uhost $bad_mask]
-    if {$mc_time != "-1"} {
-     putlog "Auto banned $nick ($ban) for saing $bad1 in $chan ([duration [expr $mc_time*60]])"
-     putserv "MODE $chan +b $ban"
-     putserv "KICK $chan $nick :[mc:bwerds:replace $mc_warning "{%match} {$bad1}"]"
-     if {$mc_time > 0} {
-      newchanban $chan $ban Auto-Set [mc:bwerds:replace $mc_warning "{%match} {$bad1}"] $mc_time
-     } ; break
+    if {[string index $mc_time 0] == "@"} {
+     set time [string range $mc_time 1 e]
+     set global 1
+    } else {set time $mc_time;set global 0}
+    if {$time != "-1"} {
+     if {$global} {set x "all channels"} else {set x $chan}
+     if {$time == "-2"} {
+      set perm 1
+      set perm_time ""
+      set duration (PERM)
+     } {
+      set perm 0
+      set perm_time $time
+      set duration ([duration [expr $time*60]])
+     }
+     putlog "Auto banned $nick ($ban) for saing $bad1 in $x $duration"
+     if {$global} {
+      foreach chanx [channels] {
+       putserv "MODE $chanx +b $ban"
+       putserv "KICK $chanx $nick :[mc:bwerds:replace $mc_warning "{%match} {$bad1}"]"
+      }
+     } else {
+      putserv "MODE $chan +b $ban"
+      putserv "KICK $chan $nick :[mc:bwerds:replace $mc_warning "{%match} {$bad1}"]"
+     }
+     if {($time > 0) || $perm} {
+      if {$global} {
+       newban $ban Auto-Set [mc:bwerds:replace $mc_warning "{%match} {$bad1}"] $perm_time
+      } else {
+       newchanban $chan $ban Auto-Set [mc:bwerds:replace $mc_warning "{%match} {$bad1}"] $perm_time
+      }
+     };break
     } {putserv "KICK $chan $nick :[mc:bwerds:replace $mc_warning "{%match} {$bad1}"]"}
    }
   }
@@ -333,7 +526,7 @@ proc mc:weed:msgm {nick uhost hand chan args} {
   }
  }
  foreach chant $chanz {
-  foreach bad1 [split $badwerds($chant) \n] {
+  foreach bad1 $badwerds($chant) {
    if {[set bad1 [string trim $bad1 "\" "]] == ""} {continue}
    if {[string match [string tolower $bad1] [string tolower $args]]} {
     if {[mc:bwerd:warn $nick $uhost $bad1]} {
@@ -343,12 +536,36 @@ proc mc:weed:msgm {nick uhost hand chan args} {
      } ; putlog "$nick was warned for saying $bad1 via PrivMSG" ; break
     }
     set ban [mc:bwerds:masktype $nick!$uhost $bad_mask]
-    putlog "Auto banned $nick ($ban) for saing $bad1 via PrivMSG ([duration [expr $mc_time*60]])"
-    putserv "MODE $chan +b $ban"
-    putserv "KICK $chan $nick :[mc:bwerds:replace $mc_warning "{%match} {$bad1}"]"
-    if {$mc_time > 0} {
-     newchanban $chan $ban Auto-Set [mc:bwerds:replace $mc_warning "{%match} {$bad1}"] $mc_time
-    } ; break
+    if {[string index $mc_time 0] == "@"} {
+     set time [string range $mc_time 1 e]
+     set global 1
+    } else {set time $mc_time;set global 0}
+    if {$time == "-2"} {
+     set perm 1
+     set perm_time ""
+     set duration (PERM)
+    } {
+     set perm 0
+     set perm_time $time
+     set duration ([duration [expr $time*60]])
+    }
+    putlog "Auto banned $nick ($ban) for saing $bad1 via PrivMSG $duration"
+    if {$global} {
+     foreach chanx [channels] {
+      putserv "MODE $chanx +b $ban"
+      putserv "KICK $chanx $nick :[mc:bwerds:replace $mc_warning "{%match} {$bad1}"]"
+     }
+    } else {
+     putserv "MODE $chan +b $ban"
+     putserv "KICK $chan $nick :[mc:bwerds:replace $mc_warning "{%match} {$bad1}"]"
+    }
+    if {($time > 0) || $perm} {
+     if {$global} {
+      newban $ban Auto-Set [mc:bwerds:replace $mc_warning "{%match} {$bad1}"] $perm_time
+     } else {
+      newchanban $chan $ban Auto-Set [mc:bwerds:replace $mc_warning "{%match} {$bad1}"] $perm_time
+     }
+    };break
    }
   }
  }
@@ -620,6 +837,21 @@ proc mc:bwerd:inter:findip {args} {
  } ; if {[info exists mc_found_ip]} {return $mc_found_ip} {return 0}
 }
 
+proc mc:bw:filt {data} {
+ regsub -all -- \\\\ $data \\\\\\\\ data ; regsub -all -- \\\[ $data \\\\\[ data ; regsub -all -- \\\] $data \\\\\] data
+ regsub -all -- \\\} $data \\\\\} data ; regsub -all -- \\\{ $data \\\\\{ data ; regsub -all -- \\\" $data \\\\\" data ; return $data
+}
+
+proc mc:bw:unfilt {data} {
+ regsub -all -- \\\\\\\\ $data \\ data
+ regsub -all -- \\\\\\\[ $data \[ data
+ regsub -all -- \\\\\\\] $data \] data
+ regsub -all -- \\\\\} $data \} data
+ regsub -all -- \\\\\{ $data \{ data
+ regsub -all -- \\\\\" $data \" data
+ return $data
+}
+
 bind pubm - * mc:weed
 bind ctcp - ACTION mc:weed:act
 bind raw - NOTICE mc:weed:raw:notc
@@ -628,6 +860,11 @@ bind msgm - * mc:msgm:weed
 if {$mc_bw(svs:enabled)} {
  if {($mc_bw(svs:check) > "23") || ($mc_bw(svs:check) < "0")} {set mc_bw(svs:check) 00}
  if {[string length $mc_bw(svs:check)] == "1"} {set mc_bw(svs:check) 0$mc_bw(svs:check)}
+ if {$mc_bw(svs:stableonly)} {
+  set mc_bw(svs:script) [string range $mc_bw(svs:script) 0 [expr [string length $mc_bw(svs:script)]-4]]999
+ }
+ catch {unbind time - "00 $mc_bw(svs:oldcheck) * * *" mc:bw:svs:time}
+ set mc_bw(svs:oldcheck) $mc_bw(svs:check)
  bind time - "00 $mc_bw(svs:check) * * *" mc:bw:svs:time
  proc mc:bw:svs:time {min hour day month year} {
   global mc_bw
@@ -643,6 +880,7 @@ proc mc:bw:svs:interface {idx args} {
   003 {
    set args [lrange $args 1 e]
    if {[lindex $args 0] != [lindex $mc_bw(svs:script) 0]} {return 0}
+   putdcc $idx q
    if {[lindex $args 1] > [lindex $mc_bw(svs:script) 1]} {
     set note [mc:bw:svs:replace [lindex $args 7] "%0 {[lindex $args 0]} %1 {[lindex $args 1]} %2 {[lindex $args 2]}"]
     set note [mc:bw:svs:replace $note "%3 {[lindex $args 3]} %4 {[lindex $args 4]} %5 {[lindex $args 5]}"]
@@ -652,14 +890,21 @@ proc mc:bw:svs:interface {idx args} {
     set note [mc:bw:svs:replace $note "%15 {[lindex $args 15]} %16 {[lindex $args 16]} %17 {[lindex $args 17]}"]
     set note [mc:bw:svs:replace $note "%18 {[lindex $args 18]} %19 {[lindex $args 19]} %20 {[lindex $args 20]}"]
     foreach notify [join [split $mc_bw(svs:notify) ",;"]] {
-     switch -- [sendnote SVS $notify [mc:bw:svs:replace $note "%nick {$notify}"]] {
+     set outnote [mc:bw:svs:replace $note "%nick {$notify}"]
+     if {[string match "*$outnote*" "[notes $notify -[notes $notify]]"]} {
+      set cont 0
+      foreach unote [notes $notify -[notes $notify]] {
+       if {$outnote == [lindex $unote 2]} {set cont 1;break}
+      };if {$cont} {continue}
+     }
+     switch -- [sendnote SVS $notify $outnote] {
       0 {putlog "MC SVS for [lindex $mc_bw(svs:script) 0] had some errors updating $notify on current version of script; unknown reason!"}
       3 {putlog "MC SVS for [lindex $mc_bw(svs:script) 0] had some errors updating $notify on current version of script; notebox too full!"}
      }
     }
-   } ; putdcc $idx q
+   }
   }
- } ; return 0
+ };return 0
 }
 proc mc:bw:svs:replace {string subs} {
  if {[llength $subs] == "1"} {set subs [lindex $subs 0]}
@@ -668,4 +913,4 @@ proc mc:bw:svs:replace {string subs} {
  } ; return $string
 }
 
-putlog "BadWerds $badwerds(version) by MC_8 loaded."
+putlog "BadWerds $mc_bw(version) by MC_8 loaded."
