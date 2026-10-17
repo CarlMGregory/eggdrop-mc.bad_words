@@ -1,5 +1,5 @@
 ##
-# Bad Words v5.1.3
+# Bad Words v5.1.4
 #  by MC_8 - Carl M. Gregory <mc8@purehype.net>
 #  This script will only run on eggdrop 1.6.13 or greater.
 #
@@ -115,9 +115,9 @@ foreach {temp(name) temp(value)} [array get mc_bw :config:*] {
 set mc_bw(info:loc) [info script]
 array set mc_bw [list \
   script                 "Bad Words" \
-  version                "v5.1.3" \
+  version                "v5.1.4" \
   svs:script             "badwerds" \
-  svs:version            "005001003000" \
+  svs:version            "005001004000" \
   svs:client_version     "v4.0" \
   svs:client_svs_version "004000000000" \
   svs:server             "mc.svs.purehype.net" \
@@ -267,10 +267,10 @@ proc mc:bw:dcc:+badword_ {handle index arg} {
 # Usage: +exemptword [channel1[,channel2[,channelN]]] <*exempt string*>
 utimer 1 [list mc:bw:list \
   bind dcc $mc_bw(:config:access) +exemptword mc:bw:dcc:+exemptword rebind]
-proc mc:bw:dcc:+exemptword {hand index arg} {
-  return [mc:bw:errchk mc:bw:dcc:+exemptword_ [list $hand $index $arg]]
+proc mc:bw:dcc:+exemptword {handle index arg} {
+  return [mc:bw:errchk mc:bw:dcc:+exemptword_ [list $handle $index $arg]]
 }
-proc mc:bw:dcc:+exemptword_ {hand index arg} {
+proc mc:bw:dcc:+exemptword_ {handle index arg} {
   global mc_bw
 
   mc:bw:unlist [split $arg] {channels ""} {args ""}
@@ -2688,6 +2688,7 @@ proc mc:bw:do_svs {{args ""}} {
 
 proc mc:bw:svs_talk {index text} {
   global mc_bw
+
   set header [list svs header $index]
   set memory [list svs memory $index]
   if {$text == ""} {
@@ -2773,15 +2774,15 @@ proc mc:bw:svs_talk {index text} {
         close $io
         set file $mc_bw(info:loc)
         putloglev o * "$mc_bw(script): Auto update testing new script..."
-        if {[catch {uplevel "source $file~new"} error]} {
+        if {[catch {uplevel #0 "source $file~new"} error]} {
           file delete -force -- $file~new
           putloglev o * "$mc_bw(script): Auto update failed: $error"
           putloglev o * "$mc_bw(script): Auto update loading previous script."
-          uplevel "source $file"
+          uplevel #0 "source $file"
         } else {
           file rename -force -- $file~new $file
           putloglev o * "$mc_bw(script): Auto update test good, reloading."
-          uplevel "source $file"
+          uplevel #0 "source $file"
         }
       }
 
@@ -2821,6 +2822,10 @@ putloglev o * "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 ##
 # History  ( <Fixed by> - [Found by] - <Info> )
 ##
+# v5.1.4 (03.25.03)
+#  MC_8 - solics - Fixed 'can't read "handle": no such variable'.
+#                  Bugzilla Bug 263
+#
 # v5.1.3 (03.24.03)
 #  MC_8 - Dillweed - Binds not being setup after a bot start or '.restart'.
 #                    Bugzilla Bug 248
