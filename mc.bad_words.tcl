@@ -1,7 +1,7 @@
 ##
-# Bad Words v5.0.2
+# Bad Words v5.1
 #  by MC_8 - Carl M. Gregory <mc8@purehype.net>
-#  This script will only run on eggdrop 1.5.5 or greater.
+#  This script will only run on eggdrop 1.6.13 or greater.
 #
 #    R.I.P. Mom, To always be remembered; Nancy Marie Gregory.
 #
@@ -46,7 +46,7 @@
 # above).  Access is restricted on a flag basis, syntax is GLOBAL|CHANNEL.  Set
 # this to "-|-" to give access to anyone (assuming they can dcc chat to the
 # bot).
-set mc_bw(access) "m|m"
+set mc_bw(:config:access) "m|m"
 
 # How do you want to mask bans?
 #      0 - *!user@host.domain
@@ -66,7 +66,7 @@ set mc_bw(access) "m|m"
 #                  a '?' (question mark) wildcard.
 #       ip       = It will mask as normal, with no '?' (question mark)
 #                  replacements as does hostname.
-set mc_bw(banmask) 11
+set mc_bw(:config:banmask) 11
 
 # Only bot's matching the flag you input below will be allowed to share with the
 # bot this script is running on.  What flag do you want to designate for such a
@@ -76,35 +76,25 @@ set mc_bw(banmask) 11
 # (capital letters ONLY), and pertain to global flags.  You can set this to ""
 # to disable sharing.  To add another bot to the sharing list, in dcc chat all
 # you have to do is '.chattr <bot> +B'.
-set mc_bw(share:flag) "B"
+set mc_bw(:config:share:flag) "B"
 
 # Bots can share the bad words database between each other, assuming they match
 # the key you set here.  This makes it so 1, no one can hack your bot 2, no
 # other bot's running this script can modify entrys in yours unless they have
 # you key.
-set mc_bw(share:key) "BlaBlaBlaBla"
+set mc_bw(:config:share:key) "BlaBlaBlaBla"
 
 # Where do you want to store the data this script will accumulate?
-set mc_bw(database) "./.badwords.dat"
+set mc_bw(:config:database) "./.badwords.dat"
 
 
-## SVS Client (Script Version Service) v3.2 ##
+## SVS Client (Script Version Service) v4.0 ##
 # Once a day, the SVS Client will connect to MC_8's SVS Server to determine if
-# there is a newer version of this script available.  This will only notify
-# users of the new version via a note.  It's up to the owner of the bot to
-# download, adjust settings then install the script.
+# there is a newer version of this script available.  If a newer version is
+# found, the script will be auto updated.
 
-# If a newer version is found, whom do you want to notify?  The notification is
-# sent via a note.  Seperate each user with a space, or set this to "" to
-# disable SVS notification.  For those whom know TCL; do not put this in list
-# format, keep it in string format.
-set mc_bw(svs:notify) "MC_8"
-
-# Would you like to restrict the concept of a new version to stable releases
-# only?
-#   0 = No, inform of both stable and beta release versions.
-#   1 = Yes, inform of only stable release versions.
-set mc_bw(svs:mode) 0
+# [0=no/1=yes] Do you want to enable auto updating?
+set mc_bw(:config:svs:enable) 1
 
 
 #
@@ -117,21 +107,31 @@ set mc_bw(svs:mode) 0
 
 #Script:mc_bw
 
-set mc_bw(script)      "Bad Words"
-set mc_bw(version)     "v5.0.2"
-set mc_bw(svs:script)  "badwerds"
-set mc_bw(svs:version) "005000002000"
-set mc_bw(svs:server)  "mc.svs.purehype.net"
-set mc_bw(svs:port)    "81"
-set mc_bw(svs:get)     "/index.tcl"
-set mc_bw(svs:query)   "svs=$mc_bw(svs:script)&version=$mc_bw(svs:version)"
-
 catch {unset temp}
-if {![info exists numversion] || ($numversion < "1050500")} {
+set mc_bw(info:vars) ""
+foreach {temp(name) temp(value)} [array get mc_bw :config:*] {
+  lappend mc_bw(info:vars) [list $temp(name) $temp(value)]
+}
+set mc_bw(info:loc) [info script]
+array set mc_bw [list \
+  script                 "Bad Words" \
+  version                "v5.1" \
+  svs:script             "badwerds" \
+  svs:version            "005001000000" \
+  svs:client_version     "v4.0" \
+  svs:client_svs_version "004000000000" \
+  svs:server             "mc.svs.purehype.net" \
+  svs:port               "81" \
+  svs:get                "/index.tcl"]
+set mc_bw(svs:query)    "svs=$mc_bw(svs:script)&"
+append mc_bw(svs:query) "version=$mc_bw(svs:version)&"
+append mc_bw(svs:query) "svs_version=$mc_bw(svs:client_svs_version)"
+
+if {![info exists numversion] || ($numversion < "1061300")} {
   set temp(tag) "$mc_bw(script) $mc_bw(version)"
-  putlog "$temp(tag) by MC_8 will only work on eggdrop 1.5.5 or greater."
-  putlog "$temp(tag)  will not work with eggdrop $version."
-  putlog "$temp(tag)  not loaded."
+ putloglev o * "$temp(tag) by MC_8 will only work on eggdrop 1.6.13 or greater."
+ putloglev o * "$temp(tag)  will not work with eggdrop $version."
+ putloglev o * "$temp(tag)  not loaded."
   return 1
 }
 
@@ -146,41 +146,44 @@ if {[info commands ishalfop] == "ishalfop"} {
 # ^
 
 # Configuration variable sanity.
-foreach {temp(a) temp(b)} [list access     "m|m" \
-                                database   "./.badwords.dat" \
-                                banmask    "2" \
-                                share:flag "B" \
-                                share:key  "key"] {
+foreach {temp(a) temp(b)} [list :config:access     "m|m" \
+                                :config:database   "./.badwords.dat" \
+                                :config:banmask    "2" \
+                                :config:share:flag "B" \
+                                :config:share:key  "key"] {
   if {![info exists mc_bw($temp(a))]} {
     set mc_bw($temp(a)) $temp(b)
   }
 }
-if {$mc_bw(access) == ""} {
-  set mc_bw(access) "n|n"
+if {$mc_bw(:config:access) == ""} {
+  set mc_bw(:config:access) "n|n"
 }
-if {![regexp -- {^[A-Z]$} $mc_bw(share:flag)]} {
-  set mc_bw(share:flag) "B"
+if {![regexp -- {^[A-Z]$} $mc_bw(:config:share:flag)]} {
+  set mc_bw(:config:share:flag) "B"
 }
-if {$mc_bw(share:key) == ""} {
-  set mc_bw(share:key) "key"
+if {$mc_bw(:config:share:key) == ""} {
+  set mc_bw(:config:share:key) "key"
 }
 #
 
 # Error system, v3.0
 proc mc:bw:error {command error arg} {
   global mc_bw version lastbind errorInfo
-  putlog "Error in script $mc_bw(script) $mc_bw(version)."
-  putlog "    Error System: v3.0"
-  putlog "       Last Bind: [expr {[info exists lastbind]?$lastbind:"-NULL-"}]"
-  putlog "         Command: $command"
-  putlog "       Arguments: $arg"
-  putlog "       Error Msg: $error"
-  putlog "    Egg. Version: [expr {[info exists version]?$version:"-NULL-"}]"
-  putlog "     TCL Version: [info tclversion]"
-  putlog "  TCL Patchlevel: [info patchlevel]"
-  putlog "*** Please submit this bug so MC_8 can fix it.  Visit"
-  putlog "*** http://mc.purehype.net:81/bugzilla/ to properly report the bug."
-  putlog \
+  putloglev o * "Error in script $mc_bw(script) $mc_bw(version)."
+  putloglev o * "    Error System: v3.0"
+  putloglev o * \
+    "       Last Bind: [expr {[info exists lastbind]?$lastbind:"-NULL-"}]"
+  putloglev o * "         Command: $command"
+  putloglev o * "       Arguments: $arg"
+  putloglev o * "       Error Msg: $error"
+  putloglev o * \
+    "    Egg. Version: [expr {[info exists version]?$version:"-NULL-"}]"
+  putloglev o * "     TCL Version: [info tclversion]"
+  putloglev o * "  TCL Patchlevel: [info patchlevel]"
+  putloglev o * "*** Please submit this bug so MC_8 can fix it.  Visit"
+  putloglev o * \
+    "*** http://mc.purehype.net:81/bugzilla/ to properly report the bug."
+  putloglev o * \
     "*** Please include ALL info. in the bug report, including the next(s)."
   error $errorInfo
 }
@@ -206,7 +209,7 @@ proc mc:bw:ctcp:action_ {nick uhost handle channel key arg} {
 
 # +badword [channel1[,channel2[,channelN]]] <*bad string*>
 utimer 1 [list mc:bw:list \
-  bind dcc $mc_bw(access) +badword mc:bw:dcc:+badword rebind]
+  bind dcc $mc_bw(:config:access) +badword mc:bw:dcc:+badword rebind]
 proc mc:bw:dcc:+badword {handle index arg} {
   return [mc:bw:errchk mc:bw:dcc:+badword_ [list $handle $index $arg]]
 }
@@ -219,7 +222,22 @@ proc mc:bw:dcc:+badword_ {handle index arg} {
     set string $channels
     set channels "global"
   } else {
-    set channels [split $channels ,]
+    set temp() 0
+    foreach channel [split $channels ,] {
+      if {[validchan $channel] ||
+          ($channel == "message") ||
+          ($channel == "global")} {
+        continue
+      }
+      set temp() 1
+      break
+    }
+    if {$temp()} {
+      set string $channels
+      set channels "global"
+    } else {
+      set channels [split $channels ,]
+    }
   }
 
   if {[regexp -- {^(-?(-h(elp)?|-\?|-s(yntax)?))?$} $arg] || ($string == "")} {
@@ -248,7 +266,7 @@ proc mc:bw:dcc:+badword_ {handle index arg} {
 
 # Usage: +exemptword [channel1[,channel2[,channelN]]] <*exempt string*>
 utimer 1 [list mc:bw:list \
-  bind dcc $mc_bw(access) +exemptword mc:bw:dcc:+exemptword rebind]
+  bind dcc $mc_bw(:config:access) +exemptword mc:bw:dcc:+exemptword rebind]
 proc mc:bw:dcc:+exemptword {hand idx arg} {
   return [mc:bw:errchk mc:bw:dcc:+exemptword_ [list $hand $idx $arg]]
 }
@@ -290,7 +308,7 @@ proc mc:bw:dcc:+exemptword_ {hand idx arg} {
 
 # Usage: -badword <badword_id>
 utimer 1 [list mc:bw:list \
-  bind dcc $mc_bw(access) -badword mc:bw:dcc:-badword rebind]
+  bind dcc $mc_bw(:config:access) -badword mc:bw:dcc:-badword rebind]
 proc mc:bw:dcc:-badword {handle index arg} {
   return [mc:bw:errchk mc:bw:dcc:-badword_ [list $handle $index $arg]]
 }
@@ -334,7 +352,7 @@ proc mc:bw:dcc:-badword_ {handle index arg} {
 
 # Usage: badwords [channel|'message'|'global'|'all']
 utimer 1 [list mc:bw:list \
-  bind dcc $mc_bw(access) badwords mc:bw:dcc:badwords rebind]
+  bind dcc $mc_bw(:config:access) badwords mc:bw:dcc:badwords rebind]
 proc mc:bw:dcc:badwords {handle index arg} {
   return [mc:bw:errchk mc:bw:dcc:badwords_ [list $handle $index $arg]]
 }
@@ -451,7 +469,7 @@ proc mc:bw:dcc:badwords_ {handle index arg} {
 }
 
 utimer 1 [list mc:bw:list \
-  bind dcc $mc_bw(access) badwordset mc:bw:dcc:badwordset rebind]
+  bind dcc $mc_bw(:config:access) badwordset mc:bw:dcc:badwordset rebind]
 proc mc:bw:dcc:badwordset {handle index arg} {
   return [mc:bw:errchk mc:bw:dcc:badwordset_ [list $handle $index $arg]]
 }
@@ -676,7 +694,7 @@ proc mc:bw:dcc:badwordset_ {handle index arg} {
 
 # Usage: -exemptword <exemptword_id>
 utimer 1 [list mc:bw:list \
-  bind dcc $mc_bw(access) -exemptword mc:bw:dcc:-exemptword rebind]
+  bind dcc $mc_bw(:config:access) -exemptword mc:bw:dcc:-exemptword rebind]
 proc mc:bw:dcc:-exemptword {handle index arg} {
   return [mc:bw:errchk mc:bw:dcc:-exemptword_ [list $handle $index $arg]]
 }
@@ -720,7 +738,7 @@ proc mc:bw:dcc:-exemptword_ {handle index arg} {
 
 # Usage: exemptwords [channel|'message'|'global'|'all']
 utimer 1 [list mc:bw:list \
-  bind dcc $mc_bw(access) exemptwords mc:bw:dcc:exemptwords rebind]
+  bind dcc $mc_bw(:config:access) exemptwords mc:bw:dcc:exemptwords rebind]
 proc mc:bw:dcc:exemptwords {handle index arg} {
   return [mc:bw:errchk mc:bw:dcc:exemptwords_ [list $handle $index $arg]]
 }
@@ -825,7 +843,7 @@ proc mc:bw:dcc:exemptwords_ {handle index arg} {
 }
 
 utimer 1 [list mc:bw:list \
-  bind dcc $mc_bw(access) exemptwordset mc:bw:dcc:exemptwordset rebind]
+  bind dcc $mc_bw(:config:access) exemptwordset mc:bw:dcc:exemptwordset rebind]
 proc mc:bw:dcc:exemptwordset {handle index arg} {
   return [mc:bw:errchk mc:bw:dcc:exemptwordset_ [list $handle $index $arg]]
 }
@@ -1020,14 +1038,14 @@ proc mc:bw:link_ {bot via} {mc:bw:share:tx get $bot}
 # Incomming message, list format:  <from> <message>
 
 utimer 1 [list mc:bw:list bind bot - \
-  [encrypt $mc_bw(share:key) mc:bw:$mc_bw(share:key)] mc:bw:rx rebind]
+  [encrypt $mc_bw(:config:share:key) mc:bw:$mc_bw(:config:share:key)] mc:bw:rx rebind]
 proc mc:bw:rx {from command arg} {
   return [mc:bw:errchk mc:bw:rx_ [list $from $command $arg]]
 }
 proc mc:bw:rx_ {from command arg} {
   global mc_bw
-  if {![matchattr $from $mc_bw(share:flag)]} {return 0}
-  set arg [decrypt "$mc_bw(share:key)+$from" $arg]
+  if {![matchattr $from $mc_bw(:config:share:flag)]} {return 0}
+  set arg [decrypt "$mc_bw(:config:share:key)+$from" $arg]
   set arg [mc:bw:2list $arg]
   if {[lindex $arg 0] != $from} {
     putloglev o - "$mc_bw(script): Fake message recieved. (!= $from)"
@@ -1068,8 +1086,8 @@ proc mc:bw:rx_ {from command arg} {
     }
 
     "synch" {
-      mc:bw:unlist $args version message name value
-
+      mc:bw:unlist $args version message name args
+      set value $args
       if {$version != "v4"} {
         putloglev d * \
           "$mc_bw(script): Synch message from $from, unknown version $version."
@@ -1108,7 +1126,8 @@ proc mc:bw:rx_ {from command arg} {
     }
 
     "modify" {
-      mc:bw:unlist $args type channels string exempt name value
+      mc:bw:unlist $args type channels string exempt name args
+      set value $args
 
       mc:bw:list add_fromshare $type $channels $string $exempt $name $value
       mc:bw:list save -quiet
@@ -1138,8 +1157,6 @@ proc mc:bw:share:tx {command arg} {
       foreach line [mc:bw:list list] {
         set line_id [mc:bw:list get_value_from_line id $line]
         if {$line_id != $id} {continue}
-
-
 
         set share [mc:bw:list get_value_from_line share $line]
         if {$share == "0"} {continue}
@@ -1171,15 +1188,17 @@ proc mc:bw:share:send {bot message} {
 proc mc:bw:send {bot message} {
   global mc_bw botnet-nick
   set message [list ${botnet-nick} $message]
-  set message [encrypt "$mc_bw(share:key)+${botnet-nick}" $message]
-  set message "[encrypt $mc_bw(share:key) mc:bw:$mc_bw(share:key)] $message"
+  set message [encrypt "$mc_bw(:config:share:key)+${botnet-nick}" $message]
+  set message "[encrypt $mc_bw(:config:share:key) mc:bw:$mc_bw(:config:share:key)] $message"
   if {[string length $message] > 400} {
     putloglev d * "$mc_bw(script): Could not send botnet information. (>400)"
     return 0
   }
   if {$bot == ""} {set bots [bots]} else {set bots [list $bot]}
   foreach bot $bots {
-    if {(![islinked $bot]) || (![matchattr $bot $mc_bw(share:flag)])} {continue}
+    if {(![islinked $bot]) || (![matchattr $bot $mc_bw(:config:share:flag)])} {
+      continue
+    }
     putbot $bot $message
   }
 }
@@ -1234,6 +1253,7 @@ proc mc:bw:list_ {command arg} {
 
     "add_fromshare" {
       mc:bw:unlist $args type channels string exempt name value
+      set value [lindex $value 0]
       set channels [string tolower $channels]
       set string [string tolower $string]
 
@@ -1259,15 +1279,20 @@ proc mc:bw:list_ {command arg} {
           set new_list ""
           foreach line $mc_bw(list) {
             if {[mc:bw:list get_value_from_line id $line] != $id} {
-              lappend new_line $line
+              lappend new_list $line
               continue
             }
             set new_line ""
+            set found 0
             foreach item $line {
               if {[lindex $item 0] == $name} {
                 set item [list $name $value]
+                set found 1
               }
               lappend new_line $item
+            }
+            if {!$found} {
+              lappend new_line [list $name $value]
             }
             lappend new_list $new_line
           }
@@ -1287,10 +1312,17 @@ proc mc:bw:list_ {command arg} {
         lappend add [list $name $value]
       }
       set new_line ""
+      set found 0
       foreach line $add {
         mc:bw:unlist $line lname
-        if {$lname == $name} {set item [list $name $value]}
-        lappend new_line $item
+        if {$lname == $name} {
+          set line [list $name $value]
+          set found 1
+        }
+        lappend new_line $line
+      }
+      if {!$found} {
+        lappend new_line [list $name $value]
       }
       lappend mc_bw(list) $add
       # Don't save here, would save on massive sych ever line (bad).
@@ -1466,14 +1498,14 @@ proc mc:bw:list_ {command arg} {
             lappend temp(bchannels) $temp(channel)
             continue
           }
-          if {![matchattr $handle $mc_bw(access) $temp(channel)] &&
-              ($mc_bw(access) != "-|-")} {
+          if {![matchattr $handle $mc_bw(:config:access) $temp(channel)] &&
+              ($mc_bw(:config:access) != "-|-")} {
             lappend temp(bchannels) $temp(channel)
             continue
           }
         } else {
-          if {![matchattr $handle $mc_bw(access)] &&
-              ($mc_bw(access) != "-|-")} {
+          if {![matchattr $handle $mc_bw(:config:access)] &&
+              ($mc_bw(:config:access) != "-|-")} {
             lappend temp(bchannels) $temp(channel)
             continue
           }
@@ -1554,7 +1586,7 @@ proc mc:bw:list_ {command arg} {
         putloglev o * "Writing $mc_bw(script) file..."
       }
 
-      set io [open $mc_bw(database) w]
+      set io [open $mc_bw(:config:database) w]
       puts $io "#v4:$mc_bw(script):$mc_bw(version):[clock seconds]"
       foreach line [mc:bw:list list] {
         puts $io " $line"
@@ -1570,8 +1602,8 @@ proc mc:bw:list_ {command arg} {
 
       set new_list ""
       set db_ver ""
-      if {![file exists $mc_bw(database)]} {close [open $mc_bw(database) w]}
-      set io [open $mc_bw(database) r]
+      if {![file exists $mc_bw(:config:database)]} {close [open $mc_bw(:config:database) w]}
+      set io [open $mc_bw(:config:database) r]
       for {set index 0} {![eof $io]} {incr index} {
         gets $io line
         if {!$index} {
@@ -1902,7 +1934,7 @@ proc mc:bw:list_ {command arg} {
               return 0
             }
             set banmask \
-              [mc:bw:maskhostbytype $nick![getchanhost $nick] $mc_bw(banmask)]
+              [mc:bw:maskhostbytype $nick![getchanhost $nick] $mc_bw(:config:banmask)]
             if {$expire == "0"} {
               putserv "MODE $channel +b $banmask"
               continue
@@ -1922,7 +1954,7 @@ proc mc:bw:list_ {command arg} {
               return 0
             }
             set banmask \
-              [mc:bw:maskhostbytype $nick![getchanhost $nick] $mc_bw(banmask)]
+              [mc:bw:maskhostbytype $nick![getchanhost $nick] $mc_bw(:config:banmask)]
             if {$expire == "0"} {
               foreach channel [channels] {
                 putserv "MODE $channel +b $banmask"
@@ -2353,7 +2385,7 @@ foreach name [set mc_bw(:help:list) [list \
   "badwordset strip"                                 \
   "badwordset exempt"                                \
   "badwordset share"]] {
-  utimer 2 [list bind filt $mc_bw(access) ".help $name" mc:bw:filt:help]
+  utimer 2 [list bind filt $mc_bw(:config:access) ".help $name" mc:bw:filt:help]
 }
 proc mc:bw:filt:help {index text} {
   global mc_bw
@@ -2615,147 +2647,165 @@ proc mc:bw:unlist {{args ""}} {
 ## End of More Tools quick procs.
 
 
-## SVS v3.2
-set mc_bw(svs:client_version) "v3.2"
-if {![info exists mc_bw(svs:mode)] ||
-    ![regexp -- {^(1|0)$} $mc_bw(svs:mode)]} {
-  set mc_bw(svs:mode) 0
-}
-if {![info exists mc_bw(svs:notify)]} {
-  if {![info exists owner]} {set owner ""}
-  set mc_bw(svs:notify) $owner
+## SVS insert (post code)
+if {![info exists mc_bw(:config:svs:enable)] ||
+    ![string match {[01]} $mc_bw(:config:svs:enable)]} {
+  set mc_bw(:config:svs:enable) 0
 }
 
 bind time - "00 00 *" mc:bw:do_svs
 proc mc:bw:do_svs {{args ""}} {
   global mc_bw
-  mc:bw:do_svs_ $mc_bw(svs:server) $mc_bw(svs:port) $mc_bw(svs:get)
+  set index [connect $mc_bw(svs:server) $mc_bw(svs:port)]
+  putdcc $index "GET $mc_bw(svs:get)?$mc_bw(svs:query) HTTP/1.0\n"
+  putdcc $index "Host: $mc_bw(svs:server):$mc_bw(svs:port)\n\n"
+  control $index mc:bw:svs_talk
 }
 
-proc mc:bw:do_svs_ {svs_server svs_port svs_get} {
+proc mc:bw:svs_talk {index text} {
   global mc_bw
-  if {[catch {
-          socket -async $svs_server $svs_port
-             } sid]} {
-    putloglev d * "$mc_bw(script): SVS socket error: $sid"
+  set header [list svs header $index]
+  set memory [list svs memory $index]
+  if {$text == ""} {
+    catch {unset mc_bw($header)}
+    catch {unset mc_bw($memory)}
     return 1
   }
-
-  fconfigure $sid -blocking 0 -buffering line
-  set tout \
-    [after 60000 "mc:bw:svs_talk $sid timeout $svs_server $svs_port"]
-  fileevent $sid readable "mc:bw:svs_talk $sid $tout"
-  puts $sid "GET $svs_get?$mc_bw(svs:query) HTTP/1.0\
-           \nHost: $svs_server:$svs_port\n"
-  flush $sid
-}
-
-proc mc:bw:svs_talk {sid tout {svs_server ""} {svs_port ""}} {
-  global mc_bw
-  set array [list svs temp $sid]
-  if {$tout == "timeout"} {
-    set temp(1) "$svs_server:$svs_port"
-    putloglev d * \
-      "$mc_bw(script): SVS Warning: Timed out connecting to $temp(1)."
-    catch {unset mc_bw($array)}
-    close $sid
+  set text [split $text]
+  set rfc [lindex $text 0]
+  set text [join [lrange $text 1 end]]
+  if {![info exist mc_bw($header)]} {
+    if {$rfc == "002"} {
+      # Done with http header and useless information.
+      if {!$mc_bw(:config:svs:enable)} {
+        catch {unset mc_bw($header)}
+        catch {unset mc_bw($memory)}
+        return 1
+      }
+      set mc_bw($header) 1
+    }
     return 0
   }
-  if {[eof $sid]} {
-    catch {unset mc_bw($array)}
-    close $sid
-    return 1
-  }
-  gets $sid get
-  after cancel $tout
-  if {![info exist mc_bw($array)]} {
-    if {$get == ""} {set mc_bw($array) 1}
-    return -1
-  }
-  if {($get == "") || [catch {llength $get}]} {
-    return -2
-  }
-  switch -- [lindex $get 0] {
+  switch -- $rfc {
+
+    001 {return 0}
+    002 {return 0}
+    003 {return 0}
+
+    010 {
+      if {$text != $mc_bw(svs:script)} {
+        set temp(1) "wanted $mc_bw(svs:script), got $temp(text:0)"
+        putloglev d * "$mc_bw(script): SVS Error: $temp(1)"
+        catch {unset mc_bw($header)}
+        catch {unset mc_bw($memory)}
+        return 1
+      }
+      return 0
+    }
+
+    011 {return 0}
+    012 {return 0}
+    013 {return 0}
+    014 {return 0}
+    017 {return 0}
+
+    004 {
+      if {[info exists mc_bw($memory)]} {
+        set file $mc_bw(info:loc)~new
+        set temp(vars) $mc_bw(info:vars)
+        set io [open $file w]
+        for {set i 0} {$i <= [llength $mc_bw($memory)]} {incr i} {
+          set line [lindex $mc_bw($memory) $i]
+          set regexp {^[; ]*set mc_bw\((:config:[^)]*)\) *(.?)}
+          if {[regexp -- $regexp $line -> name type]} {
+            set continue 0
+            foreach item $temp(vars) {
+              set item_name [lindex $item 0]
+              set item_value [lindex $item 1]
+              if {$name != $item_name} {continue}
+              set index [lsearch -exact $temp(vars) $item]
+              set temp(vars) [lreplace $temp(vars) $index $index]
+              puts $io [list set mc_bw($name) $item_value]
+              if {$type == "\{"} {
+                while {1} {
+                  if {[regexp -- {[^\\]\}(?:;? *(.*))?} $line -> extra]} {
+                    if {$extra != ""} {
+                      puts $io $extra
+                    }
+                    break
+                  }
+                  incr i
+                  set line [lindex $mc_bw($memory) $i]
+                }
+                puts $io ""
+              }
+              set continue 1
+              break
+            }
+            if {$continue} {continue}
+          }
+          puts $io $line
+        }
+        close $io
+        set file $mc_bw(info:loc)
+        putloglev o * "$mc_bw(script): Auto update testing new script..."
+        if {[catch {uplevel "source $file~new"} error]} {
+          file delete -force -- $file~new
+          putloglev o * "$mc_bw(script): Auto update failed: $error"
+          putloglev o * "$mc_bw(script): Auto update loading previous script."
+          uplevel "source $file"
+        } else {
+          file rename -force -- $file~new $file
+          putloglev o * "$mc_bw(script): Auto update test good, reloading."
+          uplevel "source $file"
+        }
+      }
+
+      catch {unset mc_bw($header)}
+      catch {unset mc_bw($memory)}
+      return 1
+    }
+
     200 {
-      set temp(host) [lindex $get 1]
-      set temp(port) [lindex $get 2]
-      set temp(get) [lindex $get 3]
+      set temp(host) [lindex $text 1]
+      set temp(port) [lindex $text 2]
+      set temp(get)  [lindex $text 3]
       set temp(cache) "$temp(host) at $temp(port)"
       putloglev d * \
         "$mc_bw(script): SVS is being redirected to $temp(cache)."
-      mc:bw:do_svs_ $temp(host) $temp(port) $temp(get)
-      close $sid
-      return 200
+      utimer 5 [list mc:bw:do_svs_ $temp(host) $temp(port) $temp(get)]
+      catch {unset mc_bw($header)}
+      catch {unset mc_bw($memory)}
+      return 1
     }
-    003 {
-      set temp(reply) [lrange $get 1 end]
-      for {set number 0} {$number <= 5} {incr number} {
-        set temp(reply:$number) [lindex $temp(reply) $number]
-      }
-      if {$temp(reply:0) != $mc_bw(svs:script)} {
-        set temp(1) "wanted $mc_bw(svs:script), got $temp(reply:0)"
-        putloglev d * "$mc_bw(script): SVS Error: $temp(1)"
-        unset mc_bw($array)
-        close $sid
-        return -3
-      }
-      if {$mc_bw(svs:mode)} {
-        set temp(svs:version) [string range $mc_bw(svs:version) 0 8]999
-      } else {
-        set temp(svs:version) [string range $mc_bw(svs:version) 0 11]
-      }
-      if {$temp(reply:1) > $temp(svs:version)} {
-        set temp(note) $temp(reply:5)
-        regsub -all -- %0 $temp(note) $temp(reply:0) temp(note)
-        regsub -all -- %1 $temp(note) $temp(reply:1) temp(note)
-        regsub -all -- %2 $temp(note) $temp(reply:2) temp(note)
-        regsub -all -- %3 $temp(note) $temp(reply:3) temp(note)
-        regsub -all -- %4 $temp(note) $temp(reply:4) temp(note)
-        regsub -all -- %version $temp(note) $mc_bw(version) temp(note)
-        foreach temp(to) [split $mc_bw(svs:notify) ",; "] {
-          if {[string trim $temp(to)] == ""} {continue}
-          regsub -- %nick $temp(note) $temp(to) temp(note2)
-          set temp(lunotes) [notes $temp(to) -[notes $temp(to)]]]
-          if {[string match *$temp(note2)* $temp(lunotes)]} {
-            set temp(found_note) 0
-            foreach temp(unote) $temp(lunotes) {
-              if {$temp(note2) == [lindex $temp(unote) 2]} {
-                set temp(found_note) 1
-                break
-              }
-            }
-            if {$temp(found_note)} {continue}
-          }
-          set temp(error) "sending note to $temp(to) -> "
-          switch -- [sendnote SVS $temp(to) $temp(note2)] {
-            0 {
-              if {![validuser $temp(to)]} {
-                append temp(error) "invalid user"
-              } else {append temp(error) "unknown error"}
-              putloglev d * \
-                "$mc_bw(script): SVS sendnote error: $temp(error)"
-            }
-            3 {
-              append temp(error) "notebox too full"
-              putloglev d * \
-                "$mc_bw(script): SVS sendnote error: $temp(error)"
-            }
-          }
-        }
-      }
-      unset mc_bw($array)
-      close $sid
-      return 2
+
+    300 {
+      lappend mc_bw($memory) $text
+      return 0
     }
+
   }
 }
+catch {unset index}
+if {![info exists mc_loaded]} {set mc_loaded(scripts) ""}
+set index [lsearch -exact $mc_loaded(scripts) mc_bw]
+lreplace mc_loaded(scripts) $index $index mc_bw
 ## ^
 
-putlog "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
+putloglev o * "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 
 ##
 # History  ( <Fixed by> - [Found by] - <Info> )
 ##
+# v5.1 (02.19.03)
+#  MC_8 -     - Fixed sharing.
+#  MC_8 -     - Fixed '[mc:bw:rx]: can't read "item": no such variable'.
+#  MC_8 -     - Upgraded SVS Client.  v3.2 -> v4.0
+#  MC_8 - ble - .+badword without giving a channel where there bad word
+#               contained a space would mess up thinking the first word was the
+#               channel.
+#               Bugzilla Bug 247
+#
 # v5.0.2 (02.14.03)
 #  MC_8 - ble - Fixed 'mc:bw:list get_value_from_type -- invalid command.'.
 #
