@@ -1,5 +1,5 @@
 ##
-# Bad Words v5.0.1
+# Bad Words v5.0.2
 #  by MC_8 - Carl M. Gregory <mc8@purehype.net>
 #  This script will only run on eggdrop 1.5.5 or greater.
 #
@@ -118,9 +118,9 @@ set mc_bw(svs:mode) 0
 #Script:mc_bw
 
 set mc_bw(script)      "Bad Words"
-set mc_bw(version)     "v5.0.0.1"
+set mc_bw(version)     "v5.0.2"
 set mc_bw(svs:script)  "badwerds"
-set mc_bw(svs:version) "005000001000"
+set mc_bw(svs:version) "005000002000"
 set mc_bw(svs:server)  "mc.svs.purehype.net"
 set mc_bw(svs:port)    "81"
 set mc_bw(svs:get)     "/index.tcl"
@@ -1239,7 +1239,7 @@ proc mc:bw:list_ {command arg} {
 
       foreach line [mc:bw:list list] {
         foreach temp() [list type channels string exempt] {
-          set line_$temp() [mc:bw:list get_value_from_type $temp() $line]
+          set line_$temp() [mc:bw:list get_value_from_line $temp() $line]
         }
         if {($line_type == $type) && ($line_channels == $channels) &&
             ($line_string == $string) && ($line_exempt == $exempt)} {
@@ -1253,7 +1253,7 @@ proc mc:bw:list_ {command arg} {
           # Note, if sending bot has more channels than is already for that
           # entry, will not add the channels.  This is good?
           if {$fail} {continue}
-          set id [mc:bw:list get_value_from_type id $line]
+          set id [mc:bw:list get_value_from_line id $line]
           # At this point, we found the matching entry and should modify instead
           # of add.
           set new_list ""
@@ -1328,7 +1328,7 @@ proc mc:bw:list_ {command arg} {
       set new_list ""
       foreach line [mc:bw:list list] {
         foreach temp() [list type channels string exempt] {
-          set line_$temp() [mc:bw:list get_value_from_type $temp() $line]
+          set line_$temp() [mc:bw:list get_value_from_line $temp() $line]
         }
         if {($line_type == $type) && ($line_channels == $channels) &&
             ($line_string == $string) && ($line_exempt == $exempt)} {
@@ -2358,7 +2358,6 @@ foreach name [set mc_bw(:help:list) [list \
 proc mc:bw:filt:help {index text} {
   global mc_bw
   set name [string tolower [join [lrange [split $text] 1 end]]]
-putlog $name
   if {[lsearch -exact $mc_bw(:help:list) $name] > -1} {
     mc:bw:help $index $name
     putloglev c * "#[idx2hand $index]# help $name"
@@ -2757,6 +2756,9 @@ putlog "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 ##
 # History  ( <Fixed by> - [Found by] - <Info> )
 ##
+# v5.0.2 (02.14.03)
+#  MC_8 - ble - Fixed 'mc:bw:list get_value_from_type -- invalid command.'.
+#
 # v5.0.1 (02.10.03)
 #  MC_8 - Minwel - Fixed 'missing "'.
 #                  Bugzilla Bug 246
