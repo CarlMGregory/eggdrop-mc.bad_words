@@ -1,5 +1,5 @@
 ##
-# Bad Words v5.1.6
+# Bad Words v5.1.7
 #  by MC_8 - Carl M. Gregory <mc8@purehype.net>
 #  This script will only run on eggdrop 1.6.13 or greater.
 #
@@ -115,9 +115,9 @@ foreach {temp(name) temp(value)} [array get mc_bw :config:*] {
 set mc_bw(info:loc) [info script]
 array set mc_bw [list \
   script                 "Bad Words" \
-  version                "v5.1.6" \
+  version                "v5.1.7" \
   svs:script             "badwerds" \
-  svs:version            "005001006000" \
+  svs:version            "005001007000" \
   svs:client_version     "v4.0" \
   svs:client_svs_version "004000000000" \
   svs:server             "mc.svs.purehype.net" \
@@ -747,7 +747,7 @@ proc mc:bw:dcc:-exemptword_ {handle index arg} {
     return 0
   }
 
-  mc:bw:list remove exempt $id
+  mc:bw:list remove $id
   putdcc $index "$mc_bw(script): Removed exempt word id $id."
   putloglev c * "#$handle# -exemptword $id"
   return 0
@@ -799,14 +799,14 @@ proc mc:bw:dcc:exemptwords_ {handle index arg} {
   }
   set posted ""
   foreach channel $temp(gchannels) {
-    foreach line [mc:bw:list list $channel bad] {
+    foreach line [mc:bw:list list $channel exempt] {
       if {[lsearch -exact $posted $line] > -1} {continue}
       lappend posted $line
     }
   }
   foreach line [lsort -index 0 -dictionary $posted] {
     foreach name [list id type added_time channels string added_by expire \
-                       use_regexp strip share last_used] {
+                       use_regexp strip share last_used warn] {
       set temp(line:$name) [mc:bw:list get_value_from_line $name $line]
     }
     foreach {name value} [list added_time 0 expire 0 use_regexp 0 strip 0 \
@@ -865,6 +865,7 @@ proc mc:bw:dcc:exemptwordset {handle index arg} {
   return [mc:bw:errchk mc:bw:dcc:exemptwordset_ [list $handle $index $arg]]
 }
 proc mc:bw:dcc:exemptwordset_ {handle index arg} {
+  global mc_bw
   mc:bw:unlist [split $arg] id name {args ""}
   if {![info exists name]} {
     mc:bw:help $index exemptwordset
@@ -1055,7 +1056,8 @@ proc mc:bw:link_ {bot via} {mc:bw:share:tx get $bot}
 # Incoming message, list format:  <from> <message>
 
 utimer 1 [list mc:bw:list bind bot - \
-  [encrypt $mc_bw(:config:share:key) mc:bw:$mc_bw(:config:share:key)] mc:bw:rx rebind]
+  [encrypt $mc_bw(:config:share:key) mc:bw:$mc_bw(:config:share:key)] \
+    mc:bw:rx rebind]
 proc mc:bw:rx {from command arg} {
   return [mc:bw:errchk mc:bw:rx_ [list $from $command $arg]]
 }
@@ -1110,7 +1112,7 @@ proc mc:bw:rx_ {from command arg} {
           "$mc_bw(script): Synch message from $from, unknown version $version."
         return 0
       }
-      mc:bw:unlist $message type channels string exempt
+      mc:bw:unlist $message type channels string {exempt ""}
       mc:bw:list add_fromshare $type $channels $string $exempt $name $value
     }
 
@@ -1121,8 +1123,7 @@ proc mc:bw:rx_ {from command arg} {
     }
 
     "add" {
-      set line [lindex $args 1]
-
+      set line [lindex $args 0]
       foreach item $line {
         foreach {name value} $item {set $name $value}
       }
@@ -1144,6 +1145,9 @@ proc mc:bw:rx_ {from command arg} {
 
     "modify" {
       mc:bw:unlist $args type channels string exempt name value
+      if {($name == "post_warn_do") || ($name == "warn_do")} {
+        set value [list $value]
+      }
 
       mc:bw:list add_fromshare $type $channels $string $exempt $name $value
       mc:bw:list save -quiet
@@ -1205,7 +1209,8 @@ proc mc:bw:send {bot message} {
   global mc_bw botnet-nick
   set message [list ${botnet-nick} $message]
   set message [encrypt "$mc_bw(:config:share:key)+${botnet-nick}" $message]
-  set message "[encrypt $mc_bw(:config:share:key) mc:bw:$mc_bw(:config:share:key)] $message"
+  set message \
+  "[encrypt $mc_bw(:config:share:key) mc:bw:$mc_bw(:config:share:key)] $message"
   if {[string length $message] > 400} {
     putloglev d * "$mc_bw(script): Could not send botnet information. (>400)"
     return 0
@@ -1378,8 +1383,15 @@ proc mc:bw:list_ {command arg} {
         foreach temp() [list type channels string exempt] {
           set line_$temp() [mc:bw:list get_value_from_line $temp() $line]
         }
-        if {($line_type == $type) && ($line_channels == $channels) &&
-            ($line_string == $string) && ($line_exempt == $exempt)} {
+        if {(($type == "bad") &&
+             ($line_type == $type) &&
+             ($line_channels == $channels) &&
+             ($line_string == $string) &&
+             ($line_exempt == $exempt)) ||
+            (($type == "exempt") &&
+             ($line_type == $type) &&
+             ($line_channels == $channels) &&
+             ($line_string == $string))} {
           set fail 0
           foreach channel $line_channels {
             if {[lsearch -exact $channels $channel] == "-1"} {
@@ -1476,12 +1488,22 @@ proc mc:bw:list_ {command arg} {
     "get_next_id" {
       # Returns the next free id.
       # Starts counting at 1.
-      set id 1
+      set id_list 0
       foreach entry [mc:bw:list list] {
-        set temp(id) [mc:bw:list get_value_from_line id $entry]
-        if {$temp(id) == ""} {continue}
-        if {$id >= $temp(id)} {set id [expr $temp(id)+1]}
-      }; return $id
+        set id [mc:bw:list get_value_from_line id $entry]
+        if {$id == ""} {continue}
+        lappend id_list $id
+      }
+      set id_list [lsort -dictionary $id_list]
+
+      for {set i 0} {$i < [llength $id_list]} {incr i} {
+        set id [lindex $id_list $i]
+        set next_id [lindex $id_list [expr $i+1]]
+        if {$id != [expr $next_id-1]} {
+          set usable_id [expr $id+1]
+          break
+        }
+      }; return $usable_id
     }
 
     "filter_channels_by_access" {
@@ -1554,14 +1576,9 @@ proc mc:bw:list_ {command arg} {
       # If no name specified, returns full info for id.
       mc:bw:unlist $args id {name ""}
       foreach line [mc:bw:list list] {
-        foreach item $line {
-          if {([lindex $item 0] == "id") &&
-               ([lindex $item 1] == $id)} {continue}
-        }
-        foreach item $line {
-          if {$name == ""} {return $line}
-          if {[lindex $item 0] == $name} {return [lindex $item 1]}
-        }
+        if {[mc:bw:list get_value_from_line id $line] != $id} {continue}
+        if {$name == ""} {return $line}
+        return [mc:bw:list get_value_from_line $name $line]
       }; return ""
     }
 
@@ -1936,42 +1953,43 @@ proc mc:bw:list_ {command arg} {
         switch -- $action {
 
           "/msg" {
-            mc:bw:unlist $line channel args
-            putserv "PRIVMSG $channel :[join $args]"
+            mc:bw:unlist $line channel_ args
+            putserv "PRIVMSG $channel_ :[join $args]"
             putloglev d * \
-              "$mc_bw(script): \[Sent\] Message $channel: [join $args]"
+              "$mc_bw(script): \[Sent\] Message $channel_: [join $args]"
           }
 
           "/notice" {
-            mc:bw:unlist $line channel args
-            putserv "NOTICE $channel :[join $args]"
+            mc:bw:unlist $line channel_ args
+            putserv "NOTICE $channel_ :[join $args]"
             putloglev d * \
-              "$mc_bw(script): \[Sent\] Notice $channel: [join $args]"
+              "$mc_bw(script): \[Sent\] Notice $channel_: [join $args]"
           }
 
           "/ban" {
-            mc:bw:unlist $line channel nick {expire ""} {option "none"}
+            mc:bw:unlist $line channel_ nick {expire ""} {option "none"}
             if {$expire == "sticky"} {
               set option sticky
               set expire ""
             }
-            if {![validchan $channel]} {
+            if {![validchan $channel_]} {
               mc:bw:list process_messages \
                 [list "/globalban %nick $expire $option"] $nick $uhost \
-                  $channel $string
+                  $channel_ $string
               continue
             }
             set banmask [mc:bw:maskhostbytype $nick!$uhost \
               $mc_bw(:config:banmask)]
-            if {[onchan $nick $channel]} {
-              putserv "MODE $channel +b $banmask"
-              putloglev d * "$mc_bw(script): \[Sent\] Ban $banmask in $channel."
+            if {[onchan $nick $channel_]} {
+              putserv "MODE $channel_ +b $banmask"
+              putloglev d * \
+                "$mc_bw(script): \[Sent\] Ban $banmask in $channel_."
             }
             if {$expire == "0"} {continue} \
             elseif {$expire == ""} {set expire 0}
-            lappend pending "newchanban [list $channel] [list $banmask] \
+            lappend pending "newchanban [list $channel_] [list $banmask] \
               [list $added_by] \$kick_message [list $expire] [list $option]"
-            set temp(msg) "\\\[Sent\\\] Added $banmask to $channel's internal"
+            set temp(msg) "\\\[Sent\\\] Added $banmask to $channel_'s internal"
             append temp(msg) " banlist."
             lappend pending "putloglev d * \"$mc_bw(script): $temp(msg)\""
             lappend pending \
@@ -1988,11 +2006,11 @@ proc mc:bw:list_ {command arg} {
             }
             set banmask [mc:bw:maskhostbytype $nick!$uhost \
               $mc_bw(:config:banmask)]
-            foreach channel [channels] {
-              if {[onchan $nick $channel]} {
-                putserv "MODE $channel +b $banmask"
+            foreach channel_ [channels] {
+              if {[onchan $nick $channel_]} {
+                putserv "MODE $channel_ +b $banmask"
                 putloglev d * \
-                  "$mc_bw(script): \[Sent\] Ban $banmask in $channel."
+                  "$mc_bw(script): \[Sent\] Ban $banmask in $channel_."
               }
             }
             if {$expire == "0"} {continue} \
@@ -2009,7 +2027,7 @@ proc mc:bw:list_ {command arg} {
           }
 
           "/kick" {
-            mc:bw:unlist $line channel nick \
+            mc:bw:unlist $line channel_ nick \
               [list args [list $mc_bw(script) $mc_bw(version)]]
             set kick_message [join $args]
 
@@ -2018,29 +2036,29 @@ proc mc:bw:list_ {command arg} {
             set pending ""
 
             if {![onchan $nick]} {
-              set temp(msg) "Cannot kick $nick from $channel (nick not on "
-              append temp(msg) "channel)."
+              set temp(msg) "Cannot kick $nick from $channel_ (nick not on "
+              append temp(msg) "channel_)."
               putloglev d * "$mc_bw(script): $temp(msg)"
               continue
             }
-            putserv "KICK $channel $nick :$kick_message"
-            set temp(msg) "\[Sent\] Kicking $nick from $channel: $kick_message"
+            putserv "KICK $channel_ $nick :$kick_message"
+            set temp(msg) "\[Sent\] Kicking $nick from $channel_: $kick_message"
             putloglev d * "$mc_bw(script): $temp(msg)"
           }
 
           "/raw" {
             putserv [join $line]
-            putloglev d * "$mc_bw(script): \[Sent\] RAW: [join $line]."
+            putloglev d * "$mc_bw(script): \[Sent\] RAW: [join $line]"
           }
 
           "/tcl" {
             uplevel #0 "eval {[join $line]}"
-            putloglev d * "$mc_bw(script): \[Sent\] TCL: [join $line]."
+            putloglev d * "$mc_bw(script): \[Sent\] TCL: [join $line]"
           }
 
           default {
             putloglev d * \
-              "$mc_bw(script): \[Invalid Command\] $action [join $line]."
+              "$mc_bw(script): \[Invalid Command\] $action [join $line]"
           }
 
         }
@@ -2868,6 +2886,24 @@ putloglev o * "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 ##
 # History  ( <Fixed by> - [Found by] - <Info> )
 ##
+# v5.1.7 (02.26.03)
+#  MC_8 -         - Was not removing sent shared -exemptword.
+#  MC_8 -         - Dcc '-exemptwords' was not removing.
+#  MC_8 - solics  - Was not adding sent shared +*words.
+#  MC_8 - solics  - Problem using -*words, was using type of last ID instead of
+#                   the id you are trying to remove.
+#  MC_8 - solics  - Fixed 'can't read "exempt": no such variable'.
+#                   Bugzilla Bug 267
+#  MC_8 - solics  - Fixed ID duplication problem.
+#  MC_8 - solics  - Listing problem for shares when modifing *warn_do's.
+#                   Bugzilla Bug 268
+#  MC_8 - solics  - Dcc command 'exemptwords' showing list of bad words.
+#  MC_8 - solics  - Fixed 'can't read "temp(line:warn)": no such variable'.
+#  MC_8 - solics  - Fixed 'can't read "mc_bw(script)": no such variable'.
+#                   Bugzilla Bug 267
+#  MC_8 - Freeder - %channel was being replaced incorrectly due to a previous
+#                   command using a <channel> argument.
+#
 # v5.1.6 (02.26.03)
 #  MC_8 - - Strings having matching special characters were being messed up upon
 #           adding.
