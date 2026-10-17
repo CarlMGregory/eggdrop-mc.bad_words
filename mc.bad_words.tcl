@@ -1,7 +1,6 @@
 ##
-# Bad Words v3.0 by (Carl M. Gregory) MC_8 <gregory@worldinter.net>
-#
-# This script will only work with eggdrop 1.5 and up only.
+# Bad Words v3.0.1 by (Carl M. Gregory) MC_8 <gregory@worldinter.net>
+#  This script will only work with eggdrop 1.5 and up only.
 #
 # If you have any questions/comments/idea's, please email me!
 # ( Include the script name and version in the title, if you do email me. )
@@ -10,34 +9,55 @@
 ##
 
 ##
-# This script will kick and ban anyone in a specified room that mentions a certin word
-# wildcards accepted!
+# This script will kick and ban anyone in a specified room that mentions a
+# certin word wildcards accepted!
 ##
 
 ##
 # HISTORY
 ##
+# v3.0.1 (10.30.01)
+#  MC_8 - Rewrote explination of ban masking types.
+#  MC_8 - Rewrote the ban masking proc again, much smaller now.
+#  MC_8 - Ban types 10-19 were not masking the host.domain correctly if it
+#         was an ip address.
+#  MC_8 - Ban type 3, 4, 8 and 9 wasn't masking the host correctly.
+#  MC_8 - Morpheus233 - Ban types 10-19 were giving tcl errors.  'TCL error
+#                       [mc:bw:pubm]: syntax error in expression "[regexp --
+#                       {^1[0-9]$} $type] &&', fixed.
+#  MC_8 - Added share:flag configuration option.
+#  MC_8 - Morpheus233, Daniel - Fixed 'TCL error [mc:bw:pubm]: can't read 
+#                               "channel": no such variable'.
+#  MC_8 - Dr.W95 - Added warn_msgtype configuration option.
+#  MC_8 - Made minor changes to the SVS client section -- to give proper
+#         error if an invalid user is specified to recieve a notification
+#         of a newer version.
+#  MC_8 - Remove *inter:str proc, replaced with format's insted (more 
+#         efficient).
+#  MC_8 - Rewrote the ban masking proc, it's quicker.
+#  MC_8 - Removed the findip proc.
+#
 # v3.0 (10.14.01)
 #  MC_8 - Added prompt interfact for +(bad|exempt)word.
 #  MC_8 - Bots were flooding "U" on load via botnet link.
 #  MC_8 - Bot was getting flooded down with utimers.
 #  MC_8 - Entrie expire time wasn't working.
 #  MC_8 - Added dcc commands; exemptwords, +exemptword, -exemptword
-#  MC_8 - ckitt - Fixed 'invalid command name ...' dealing with  '("1-2" arm
-#                 line 1)' (part of the db auto conversion).
-#  MC_8 - Added catches to not put a kick (nor ban) on the channel if the user
-#         (or banmask) isn't on the channel, saves bandwidth and also makes
-#         the listed 'Actions:' performed smaller.
+#  MC_8 - ckitt - Fixed 'invalid command name ...' dealing with  '("1-2" 
+#                 arm line 1)' (part of the db auto conversion).
+#  MC_8 - Added catches to not put a kick (nor ban) on the channel if the
+#         user (or banmask) isn't on the channel, saves bandwidth and also
+#         makes the listed 'Actions:' performed smaller.
 #  MC_8 - ckitt - Relay kick message has a prepending ':' that shouldn't be
 #                 there.
 #  MC_8 - ckitt - Added ability to share badwords entries among the botnet.
 #  MC_8 - Since expire, last used, and warnings are now used per entry, the
-#         database version has changed to v2.  I coded in an auto db converter
-#         to convert v1 to v2.
+#         database version has changed to v2.  I coded in an auto db 
+#         converter to convert v1 to v2.
 #  MC_8 - Added last used visual.
 #  MC_8 - Added expire option.
-#  MC_8 - After exceeding warnings the bot was starting warning's over again
-#         at 0, for the user -- fixed.
+#  MC_8 - After exceeding warnings the bot was starting warning's over 
+#         again at 0, for the user -- fixed.
 #  MC_8 - Fixed `TCL error [mc:bw:???]: illegal channel: <bots irc nick>`.
 #         This error doesn't occure on undernet, was found on dalnet.
 #  MC_8 - If bantime was set to -1, it wasn't kicking as well.  Fixed.
@@ -68,10 +88,11 @@
 #  MC_8 - Rami - Fixed `Tcl error [mc:msgm:weed]: wrong # args: should be
 #                "foreach varList list ?varList list ...? command"`
 #  MC_8 - KatzEye - Added ability to have perm bans, insted of timed bans.
-#  MC_8 - KatzEye - Added ability to have the ban's global or channel specific.
+#  MC_8 - KatzEye - Added ability to have the ban's global or channel 
+#                   specific.
 #  MC_8 - Updated SVS to v1.2
-#  MC_8 - Made the badword strings settable via dcc (on the fly) rather than
-#         editing them within the script.
+#  MC_8 - Made the badword strings settable via dcc (on the fly) rather
+#         than editing them within the script.
 #
 # v1.11 (01.31.01)
 #  (( Opps, forgot to log history changes for this version. ))
@@ -84,42 +105,49 @@
 # v1.10 (08.14.00)
 #  MC_8 - John Lange - Removed the ignore procedure.
 #  MC_8 - Tcl error [mc:weed]: invalid command name "findip"
-#  MC_8 - `Tcl error [mc:weed:act]: illegal channel: police' This assuming your bot's 
-#         nick is police.  Happens on ACTIONs to the bot.
+#  MC_8 - `Tcl error [mc:weed:act]: illegal channel: police' This assuming
+#         your bot's nick is police.  Happens on ACTIONs to the bot.
 #
 # v1.9 (04.08.00)
 #  MC_8 - eggheads - Removed this script's dependency on moretools.
-#  MC_8 - Removed the requirment of having to "quote" searches contaning spaces.
+#  MC_8 - Removed the requirment of having to "quote" searches contaning 
+#         spaces.
 #
 # v1.8.2 (02-07-00)
 #  MC_8 - Speedo- - Fixed `set mc_time to -1 to turn off banning'
 #  MC_8 - Speedo- - Fixed kicking procedure.
 #
 # v1.8.1 (01-14-00)
-#  MC_8 - *search* found the word, but a search* or search would not find the badword, 
-#         fixed.
-#  MC_8 - Fixed the "duration ..." thing (showed up in the post via dcc), forgot the []'s
+#  MC_8 - *search* found the word, but a search* or search would not find 
+#         the badword, fixed.
+#  MC_8 - Fixed the "duration ..." thing (showed up in the post via dcc), 
+#         forgot the []'s
 #
 # v1.8 (01-03-00)
-#  MC_8 - Processes messages from user X and processes them as if they were text said to the rooms,
-#         witch would pull from global then channel bad werd list.
-#         example:  say your rule for #warez4free is "*join #*" and #warez4warez is "*ratio*",
-#                   and let's say user X in in #warez4free and in #warez4warez and /msg's the
-#                   bot with " hey dude, join #blaboo " .. he will get booted from #warez4free
-#                   but not from #warez4warez.
-#         note: This function is optional, can be turned off if I confused the hell outa ya :P~  .
-#  MC_8 - Added message to badwords set, for all messages, this is processed before specific channel
-#         badwords are done.
+#  MC_8 - Processes messages from user X and processes them as if they were
+#         text said to the rooms, witch would pull from global then channel
+#         bad werd list.
+#         example:  say your rule for #warez4free is "*join #*" and 
+#                   #warez4warez is "*ratio*", and let's say user X in in
+#                   #warez4free and in #warez4warez and /msg's the bot with
+#                   " hey dude, join #blaboo " .. he will get booted from
+#                   #warez4free but not from #warez4warez.
+#         note: This function is optional, can be turned off if I confused
+#               the hell outa ya :P~  .
+#  MC_8 - Added message to badwords set, for all messages, this is 
+#         processed before specific channel badwords are done.
 #
 # v1.7 (12-14-99)
-#  MC_8 - Fixed %match display, was showing (if you know tcl) lindex %match 0, only taking
-#         the first if there was a space in the search.
+#  MC_8 - Fixed %match display, was showing (if you know tcl) lindex 
+#         %match 0, only taking the first if there was a space in the 
+#         search.
 #
 # v1.6 (12-05-99)
 #  MC_8 - added %match veriable to warning message and kick message.
-#  MC_8 - Malik - if you had NO global defined (regardless of wether or not it was empty) (in
-#                 other words, you DELEATED global set) the whole script ceased to work, no
-#                 error messages what so ever.   (-( Woo Hoo, Fixed! )-)
+#  MC_8 - Malik - if you had NO global defined (regardless of wether or not
+#                 it was empty) (in other words, you DELEATED global set) 
+#                 the whole script ceased to work, no error messages what 
+#                 so ever.   (-( Woo Hoo, Fixed! )-)
 #
 # v1.5 (11-22-99)
 #  MC_8 - unknown - treating channel notice's as regular channel text.
@@ -127,7 +155,8 @@
 # v1.4 (10-18-99)
 #  MC_8 - m8s - now ban before kick (as opposed
 #   to vice versa)
-#  MC_8 - I fixed the bantype error (it was in moretools), anyhow, moretools 1.1.6 min. inst.
+#  MC_8 - I fixed the bantype error (it was in moretools), anyhow,
+#         moretools 1.1.6 min. inst.
 # 
 # v1.3 (10-11-99)
 #  MC_8 - m8s - found minor error in ban masking option, fixed.
@@ -143,22 +172,22 @@
 # +badword [[#channel|&message|&global] <*bad*string*> [#warnings] [%expire <XdXhXm>] <kick/warning message>]
 #  This will add a bad word string, such as "*every*goto*http://*".
 #  EXAMPLES: .+badword #eggdrop *i*want*free*shell* Do not ask about free shells, against rules.
-#              This will add *i*want*free*shell* to #eggdrop's badword list,
-#              the warning and kick message will be "Do not ask for free shells,
-#              against rules".
-#              whatever you set below in the settings.
+#              This will add *i*want*free*shell* to #eggdrop's badword 
+#              list, the warning and kick message will be "Do not ask for 
+#              free shells, against rules". Whatever you set below in the 
+#              settings.
 #            .+badword *MC_8*sucks* MC Rocks
 #              This will add *MC_8*sucks* to the global badword list, the
 #              warning/kick message will be "MC Rocks".
 #            .+badword &global *MC_8*sucks* No he doesn't.
-#              This will add *MC_8*sucks* to the global badword list as well,
-#              the warning/kick message will be "No he doesn't.".
+#              This will add *MC_8*sucks* to the global badword list as 
+#              well, the warning/kick message will be "No he doesn't.".
 #            .+badword &message * #3 Don't message me!
 #              This will give 3 warnings before issuing a ban. If you don't
 #              specify number of warnings, it will default to 0 (none).
 #            .+badword &message * %1d3h14m Don't message me!
-#              This will expire the badword restriction after 1 day, 2 hours
-#              and 14 min's.
+#              This will expire the badword restriction after 1 day, 2 
+#              hours and 14 min's.
 #            .+badword
 #              This will start the +badword prompt interface.
 #
@@ -171,12 +200,12 @@
 # +exemptword [[#channel|&message|&global] <*exempt*string*> [%expire <XdXhXm>]]
 #  This will add an exempt word string, such as "*every*goto*http://*".
 #  EXAMPLES: .+exemptword &message "op *"
-#              This will exempt all private messages (msg/ action/ notice) that
-#              start with op.  You might want to exempt all message commands
-#              such as ident, op, voice, help and so on.
+#              This will exempt all private messages (msg/ action/ notice)
+#              that start with op.  You might want to exempt all message 
+#              commands such as ident, op, voice, help and so on.
 #            .+exemptword #abc123 "!vote *" %1d
-#              This exempts all messages to #abc123 that starts with !vote, it
-#              will expire in  day.
+#              This exempts all messages to #abc123 that starts with !vote,
+#              it will expire in  day.
 #            .+exemptword
 #              This will start the +exemptword prompt interface.
 #
@@ -211,7 +240,9 @@
 #   NOTE: For better usefullness, there is no agressive and passive sharing
 #         involved in this.  However, keep in mind, if one of the shre bots
 #         are not linked and you do a .-badword; the bot that's not linked
-#         will never know you removed it.  It's the same way with ban. 
+#         will never know you removed it.  It's the same way with ban.
+#   NOTE: The flag 'B' is changable, incase 'B' conflicts with some other
+#         script. 
 #  
 #
 # Usefull information:
@@ -226,16 +257,17 @@
 #    %string  == The *ban*string* that was triggered by the user.
 #    %add     == Who this was added by.
 #      Example:  %add said not to say %string in %channel!
-#  - *bad*string*'s (and *exempt*string*'s) don't bother with case sensativity.
+#  - *bad*string*'s (and *exempt*string*'s) don't bother with case 
+#    sensativity.
 #  - Avilable wildcards for the *bad*string*'s (and *exempt*string*'s) are:
-#     *       = Matches any sequence of characters in string, including a null
-#               string. 
+#     *       = Matches any sequence of characters in string, including a 
+#               null string. 
 #     ?       = Matches any single character in string. 
-#     [chars] = Matches any character in the set given by chars. If a sequence of
-#               the form x-y appears in chars, then any character between x and y,
-#               inclusive, will match.  Whereas [a-mr-z] matches any character
-#               between a and m, inclusive, or matches any character between r and
-#               z, inclusive.
+#     [chars] = Matches any character in the set given by chars. If a 
+#               sequence of the form x-y appears in chars, then any 
+#               character between x and y, inclusive, will match.  Whereas
+#               [a-mr-z] matches any character between a and m, inclusive, 
+#               or matches any character between r and z, inclusive.
 ##
 
 ##
@@ -256,12 +288,19 @@ set mc_bw(database) ".badwords.dat"
 # Flag format:  <global>|<channel>
 set mc_bw(exempt) "b|"
 
+# How do you want to send warning messages?
+#    0 = Private message to the offender.
+#    1 = Private notice to the offender.
+#    2 = Public message in the channel of the offender.
+set mc_bw(warn_msgtype) 0
+
 # [0=no/1=yes] Upon warning, do you want to kick the user?
 set mc_bw(warn_kick) 0
 
 # Upon warning, what modes to you want to change on the user?
 # Example:  If the channel is moderated, insted of kicking the person
-#           you can just -v him (removing his voice to speak in the channel).
+#           you can just -v him (removing his voice to speak in the 
+#           channel).
 # To disable this feature, set this to "".
 # Replacment veriables:
 #  %botnick == The bot's nick.
@@ -274,10 +313,11 @@ set mc_bw(warn_mode) ""
 # This is the ban time (in MIN.s)
 #  -2 = PERM ban (no expiration in bot records)
 #  -1 = Will not ban.
-#   0 = Performs a server ban, but doesn't store the ban in the bot's ban list.
+#   0 = Performs a server ban, but doesn't store the ban in the bot's ban 
+#       list.
 #  Any number greater than 0 will be the time in witch the ban will expire.
-#  All ban's will be channel ban's, if you want it to be a global ban -- put
-#  a "@" infront of the time.  Ie. set mc_bw(bantime) @1440
+#  All ban's will be channel ban's, if you want it to be a global ban -- 
+#  put a "@" infront of the time.  Ie. set mc_bw(bantime) @1440
 set mc_bw(bantime) 1440
 
 # [0=no/1=yes] Do you want to process messages and notices directed
@@ -287,13 +327,14 @@ set mc_bw(procmsg) 0
 
 # [0=no/1=yes] Do you want to strip color/bold/underline/reverse characters
 #  from the public text before evaluating?
-#  example: Some users get past the kick/ban by puting doing www.something.net
-#           on mIRC.  That shows up as www.something.net to the human eye on
-#           an mIRC client, but to the bot it's NOT *www.*, it's *www.*.
+#  example: Some users get past the kick/ban by puting doing 
+#           www.something.net on mIRC.  That shows up as www.something.net
+#           to the human eye on an mIRC client, but to the bot it's NOT 
+#           *www.*, it's *www.*.
 set mc_bw(strip) 1
 
 # Upon issuing a ban, how do you want it to mask the ban?
-#  Default == 2
+#  Default == 5
 #      0 - *!user@host.domain
 #      1 - *!*user@host.domain
 #      2 - *!*@host.domain
@@ -304,37 +345,52 @@ set mc_bw(strip) 1
 #      7 - nick!*@host.domain
 #      8 - nick!*user@*.domain
 #      9 - nick!*@*.domain
-#     You can also specify a type of 10 to 19 which correspond to masks 0 to 9, but
-#     instead of using a * wildcard to replace portions of the host.domain, it uses ?
-#     wildcards to replace the numbers in the address.
+#     You can also specify a type of 10 to 19 which correspond to masks 0 
+#     to 9.  But if the host.domain is a;
+#       hostname = Instead of using a * wildcard to replace portions of the
+#                  host.domain, it replaces the numbers in the host.domain 
+#                  with a '?' (question mark) wildcard
+#       ip       = It will mask as normal, with no '?' (question mark)
+#                  replacments as does hostname.
 set mc_bw(banmask) 11
 
+# What flag should the script use to designate another bot as sharing
+# with this script?  This has nothing to do with the 2 relay settings
+# below.  If you don't know what this is, don't mess with it.  This setting
+# is here just incase another script uses the 'B' flag (as not not conflict).
+# Valid flags here can be A threw Z (capital letters ONLY!).
+set mc_bw(share:flag) "B"
+
 # [0=no/1=yes] Upon the bot recieving a badword match sent via private 
-# (notices/ actions/ msgs), if the bot is not op'd in certin channels... do you want
-# the script to have anoter bot op handle the warn/bans of the user?
-# Note:  The other bots have to be linked, they have to use mc.badwords also, and
-#        they have to have the mc_bw(relay:rx) option enabled.
-# Note:  For security reasons, the bot will never transmit any mode changes upon
-#        other than +b (ban).
+# (notices/ actions/ msgs), if the bot is not op'd in certin channels... do
+# you want the script to have anoter bot op handle the warn/bans of the 
+# user?
+# Note:  The other bots have to be linked, they have to use mc.badwords 
+#        also, and they have to have the mc_bw(relay:rx) option enabled.
+# Note:  For security reasons, the bot will never transmit any mode changes
+#        upon other than +b (ban).
 set mc_bw(relay:tx) 1
 
-# [0=no/1=yes] As with the setting above, do you want to recieve others' relay
-# messages and process them?  If you set it to 0, it will just ignore the other
-# bot's when they ask the botnet to ban the user for saying a badword.
-# Note:  For security reasons, the bot will never perform any mode changes upon
-#        recieving a transmit other than +b (ban).
+# [0=no/1=yes] As with the setting above, do you want to recieve others' 
+# relay messages and process them?  If you set it to 0, it will just ignore
+# the other bot's when they ask the botnet to ban the user for saying a 
+# badword.
+# Note:  For security reasons, the bot will never perform any mode changes 
+#        upon recieving a transmit other than +b (ban).
 set mc_bw(relay:rx) 1
 
-# Set a key, this key can be whatever you want -- only scripts with the same key
-# can interact with one another (provided relay:rx and relay:tx, above) are enabled.
+# Set a key, this key can be whatever you want -- only scripts with the 
+# same key can interact with one another (provided relay:rx and relay:tx, 
+# above) are enabled.
 set mc_bw(relay:key) "BlaBlaBlaBla"
 
-## MC SVS (Script Version Service) v1.2 ##
-# Do you want the bot to connection to MC_8's SVS to see if there are newer versions
-# of this script avilable?  It will only tell you -- It's up to you to get the newest
-# version (I decided not to auto update the code, there may be new features in the
-# newest script that may require your attention).
-# 0=no/1=yes
+## MC SVS (Script Version Service) v1.3 ##
+# [0=no/1=yes] Do you want the script to auto connect to MC_8's SVS 
+# (Script Version Service) to see if there is a newer version of this 
+# script avilable?  It will only tell you if there is a newer version,
+# it's up to you to get the newest version. I decided not to auto update
+# the code, there may be new features in the newest script that may 
+# require your attention.
 set mc_bw(svs:enabled) 1
 
 # Once a day the script will check with the SVS -- this specifies when
@@ -346,25 +402,25 @@ set mc_bw(svs:enabled) 1
 #  set mc_bw(svs:check) 23  ;#This is at 11pm
 set mc_bw(svs:check) 3
 
-# Upon finding a newer version, who do you want to notify via note?
-# Only the admin of the bot should really be worried about these notes,
-# there the ones that keep everything up to par on the bots.
-# Seperate each user with a " " (space).
+# Upon finding a newer version of this script, who do you want this script
+# to send a note to telling them of this newer version?
+# If more than 1 user is to be notified, seperate each user with a
+# ' ' (space).
 set mc_bw(svs:notify) "MC_8"
 
-# Do you want even beta version notified to whomever you have set?  Or just
-# stable releases of the script?
-#  0 = Tell me about all version, even beta versions.
-#  1 = Just tell me about new stable versions.
+# Do you want to monitor only stable versions, disregarding beta versions?
+#    0 = Tell me about all version, even beta versions.
+#    1 = Just tell me about new stable versions.
 set mc_bw(svs:stableonly) 0
 
 
 
-
+###
 ## Coding below, do not proceed -- you are done with the settings.
+###
 
-set mc_bw(version) v3.0
-set mc_bw(svs:script) "badwerds 003000000000"
+set mc_bw(version) v3.0.1
+set mc_bw(svs:script) "badwerds 003000001000"
 set mc_bw(svs:server) "mc.purehype.net 8085"
 
 if {$numversion < "1050000"} {
@@ -374,17 +430,22 @@ if {$numversion < "1050000"} {
  return 1
 }
 
-setudef flag mc.bw.exemptvoice;setudef flag mc.bw.exemptop
+setudef flag mc.bw.exemptvoice; setudef flag mc.bw.exemptop
 
 if {(![info exists mc_bw(access)]) || ($mc_bw(access) == "")} {set mc_bw(access) "m|m"}
 if {![info exists mc_bw(database)]} {set mc_bw(database) "./.badwords.dat"}
 if {![info exists mc_bw(exempt)]} {set mc_bw(exempt) ""}
+if {(![info exists mc_bw(warn_msgtype)]) ||
+    (![regexp -- {^[012]$} $mc_bw(warn_msgtype)])} {set mc_bw(warn_msgtype) 0}
 if {![info exists mc_bw(warn_kick)]} {set mc_bw(warn_kick) 0}
 if {![info exists mc_bw(warn_mode)]} {set mc_bw(warn_mode) ""}
 if {![info exists mc_bw(bantime)]} {set mc_bw(bantime) 1440}
 if {![info exists mc_bw(procmsg)]} {set mc_bw(procmsg) 0}
 if {![info exists mc_bw(strip)]} {set mc_bw(strip) 0}
 if {![info exists mc_bw(banmask)]} {set mc_bw(banmask) 2}
+if {(![info exists mc_bw(share:flag)]) ||
+    ([regexp -- {[^A-Z]} [string index $mc_bw(share:flag) 0]])} {set mc_bw(share:flag) B}
+set mc_bw(share:flag) [string index $mc_bw(share:flag) 0]
 if {![info exists mc_bw(relay:tx)]} {set mc_bw(relay:tx) 1}
 if {![info exists mc_bw(relay:rx)]} {set mc_bw(relay:rx) 1}
 if {(![info exists mc_bw(relay:key)]) || ($mc_bw(relay:key) == "")} {set mc_bw(relay:key) "key"}
@@ -740,11 +801,11 @@ proc *mc:bw:dcc:badword {hand idx arg} {
   if {!$lu} {set lu never} else {
    if {[regexp -- day [set lu [mc:bw:inter:ut2d $lu]]]} {lappend lu ago}
   }
-  putdcc $idx " $ch:[mc:bw:inter:str " " [expr 8-[string length $ch]]] $st ($ex)"
-  putdcc $idx "           $ad: $ms"
-  putdcc $idx "           Warnings: $wn"
-  putdcc $idx "           Last used $lu"
-  putdcc $idx "           Created $ta"
+  putdcc $idx [format "%9s %s" "$ch:" "$st ($ex)"    ]
+  putdcc $idx [format "%9s %s" ""     "$ad: $ms"     ]
+  putdcc $idx [format "%9s %s" ""     "Warnings: $wn"]
+  putdcc $idx [format "%9s %s" ""     "Last used $lu"]
+  putdcc $idx [format "%9s %s" ""     "Created $ta"  ]
  };return 0
 }
 
@@ -780,10 +841,10 @@ proc *mc:bw:dcc:exemptword {hand idx arg} {
   if {!$lu} {set lu never} else {
    if {[regexp -- day [set lu [mc:bw:inter:ut2d $lu]]]} {lappend lu ago}
   }
-  putdcc $idx " $ch:[mc:bw:inter:str " " [expr 8-[string length $ch]]] $st ($ex)"
-  putdcc $idx "           Added By : $ad"
-  putdcc $idx "           Last used: $lu"
-  putdcc $idx "           Created $ta"
+  putdcc $idx [format "%9s %s" "$ch:" "$st ($ex)"     ]
+  putdcc $idx [format "%9s %s" ""     "Added By : $ad"]
+  putdcc $idx [format "%9s %s" ""     "Last used: $lu"]
+  putdcc $idx [format "%9s %s" ""     "Created $ta"   ]
  };return 0
 }
 
@@ -857,31 +918,36 @@ proc mc:bw:bw {nick uhost hand chan arg type} {
  set host [string range $uhost [expr [string first @ $uhost]+1] end]
  if {$chan == "&message"} {set temp "private $type"} else {set temp $chan}
  set message [mc:bw:inter:replace $l_ms "%method [list $type] %channel [list $temp] %string [list $l_st] %add [list $l_ad]"]
+ set action ""
  if {[mc:bw:warn $host $chan $l_st $l_wn]} {
-  puthelp "PRIVMSG $nick :$message";set action warned
+  switch -- $mc_bw(warn_msgtype) {
+   0 {lappend action "warned (via private message)";puthelp "PRIVMSG $nick :$message"}
+   1 {lappend action "warned (via private notice)" ;puthelp "NOTICE $nick :$message" }
+  }
   if {$chan == "&message"} {
    set channels [string tolower [channels]]
    set x "to me"
   } else {set channels $chan;set x "in $chan"}
+  if {$mc_bw(warn_msgtype) == "2"} {lappend action "warned (via public @ [join $channels ", "])"}
   foreach channel $channels {
+   if {$mc_bw(warn_msgtype) == "2"} {puthelp "PRIVMSG $channel :$message"}
    if {($mc_bw(warn_mode) != "") && ([isop $botnick $channel])} {
     set temp [mc:bw:inter:replace $mc_bw(warn_mode) "%botnick [list $botnick] %nick [list $nick]"]
-    putserv "MODE $channel $temp";append action ", mode changed ($channel $temp)"
+    putserv "MODE $channel $temp";lappend action "mode changed ($channel $temp)"
    }
    if {$mc_bw(warn_kick)} {
     if {(![isop $botnick $channel]) && ($chan == "&message") && ($mc_bw(relay:tx))} {
      putallbots [list badwords $mc_bw(relay:key) KICK $channel $nick $message]
-     append action ", relay kick request (not op'd in $channel)"
+     lappend action "relay kick request (not op'd in $channel)"
     } elseif {([onchan $nick $channel]) && ([isop $botnick $channel])} {
-     putserv "KICK $channel $nick :$message";append action ", kicked ($channel)"
+     putserv "KICK $channel $nick :$message";lappend action "kicked ($channel)"
     }
    }
-  };putlog "Badwords: $nick was caught saying '$l_st' $x.  Action taken: $action"
+  };putlog "Badwords: $nick was caught saying '$l_st' $x.  Action taken: [join $action ", "]"
  } else {
   set banmask [mc:bw:inter:masktype $nick!$uhost $mc_bw(banmask)]
   set global [string match @* $mc_bw(bantime)]
   set ban_time [string trimleft $mc_bw(bantime) @]
-  puthelp "PRIVMSG $nick :$message";set action "privmsg'd kick message"
   if {$ban_time == "-2"} {
    set ban_time ""
    set duration "Perm Ban"
@@ -897,7 +963,7 @@ proc mc:bw:bw {nick uhost hand chan arg type} {
       set temp " and ban"
      }
      putallbots [list badwords $mc_bw(relay:key) KICK $channel $nick $message]
-     append action ", relay kick$temp request (not op'd in $channel)"
+     lappend action "relay kick$temp request (not op'd in $channel)"
     } else {
      set x 0
      if {([mc:bw:inter:findchanuser $banmask $channel] != "") && ([isop $botnick $channel])} {
@@ -907,36 +973,36 @@ proc mc:bw:bw {nick uhost hand chan arg type} {
       putserv "KICK $channel $nick :$message";incr x 2
      }
      switch -- $x {
-      1 {append action ", banned ($channel)"}
-      2 {append action ", kicked ($channel)"}
-      3 {append action ", kicked and banned ($channel)"}
+      1 {lappend action "banned ($channel)"}
+      2 {lappend action "kicked ($channel)"}
+      3 {lappend action "kicked and banned ($channel)"}
      }
     }
    }
    if {($ban_time > "0") || ($ban_time == "")} {
     newban $banmask $l_ad $message $ban_time
-    append action ", added global ban in bots banlist (Duration: $ban_time)"
+    lappend action "added global ban in bots banlist (Duration: $ban_time)"
    }
   } else {
    set x 0
    if {([mc:bw:inter:findchanuser $banmask $chan] != "") && ([isop $botnick $chan])} {
-    if {$ban_time != "-1"} {putserv "MODE $channel +b $banmask";incr x 1}
+    if {$ban_time != "-1"} {putserv "MODE $chan +b $banmask";incr x 1}
    }
    if {([onchan $nick $chan]) && ([isop $botnick $chan])} {
     putserv "KICK $chan $nick :$message";incr x 2
    }
    switch -- $x {
-    1 {append action ", banned ($channel)"}
-    2 {append action ", kicked ($channel)"}
-    3 {append action ", kicked and banned ($channel)"}
+    1 {lappend action "banned ($chan)"}
+    2 {lappend action "kicked ($chan)"}
+    3 {lappend action "kicked and banned ($chan)"}
    }
    if {($ban_time > "0") || ($ban_time == "")} {
     newchanban $chan $banmask $l_ad $message $ban_time
-    append action ", added channel ban in bots banlist (Duration: $ban_time)"
+    lappend action "added $chan channel ban in bots banlist (Duration: $ban_time)"
    }
   }
   if {$chan == "&message"} {set x "to me"} else {set x "in $chan"}
-  putlog "Badwords: $nick was caught saying '$l_st' $x.  Action taken: $action"
+  putlog "Badwords: $nick was caught saying '$l_st' $x.  Action taken: [join $action ", "]"
  }
 }
 
@@ -964,9 +1030,9 @@ proc mc:bw:bot {from command arg} {
    set ty [join [lindex $arg 3]]
    set ch [join [lindex $arg 4]]
    if {[string index $ch 0] != "#"} {
-    set access [matchattr $from B|]
+    set access [matchattr $from b$mc_bw(share:flag)|]
    } elseif {[validchan $ch]} {
-    set access [matchattr $from B|B $ch]
+    set access [matchattr $from b$mc_bw(share:flag)|$mc_bw(share:flag) $ch]
    } else {set access 0}
    set cmd [join [lindex $arg 2]]
    if {(!$access) && ($cmd != "U")} {return 0}
@@ -1020,6 +1086,7 @@ bind link - * mc:bw:link;proc mc:bw:link {bot via} {mc:bw:inter:share U:$bot}
 #   mc:bw:inter:share U:<bot>
 # > x share cmd arg
 proc mc:bw:inter:share {command {arg {}}} {
+ global mc_bw
  set chan [join [lindex $arg 0]]
  set cmd [string range $command 0 [expr [string first : $command]-1]]
  set bot [string range $command [expr [string first : $command]+1] end]
@@ -1033,15 +1100,15 @@ proc mc:bw:inter:share {command {arg {}}} {
   foreach _bot $bot {
    if {![islinked $_bot]} {continue}
    if {[string index $chan 0] != "#"} {
-    set access [matchattr $_bot B|]
+    set access [matchattr $_bot b$mc_bw(share:flag)|]
    } elseif {[validchan $chan]} {
-    set access [matchattr $_bot B|B $chan]
+    set access [matchattr $_bot b$mc_bw(share:flag)|$mc_bw(share:flag) $chan]
    } else {set access 0}
    if {$access} {putbot $_bot "badwords x share load $arg"}
   };return
  }
- if {[string index $chan 0] != "#"} {set userlist [userlist B|]} elseif {[validchan $chan]} {
-  set userlist [userlist B|B $chan]
+ if {[string index $chan 0] != "#"} {set userlist [userlist b$mc_bw(share:flag)|]} elseif {[validchan $chan]} {
+  set userlist [userlist b$mc_bw(share:flag)|$mc_bw(share:flag) $chan]
  } else {set userlist ""}
  foreach bot $userlist {
   if {![islinked $bot]} {continue}
@@ -1217,13 +1284,6 @@ proc mc:bw:inter:ut2d {time} {
  return $d
 }
 
-proc mc:bw:inter:str {string {times {}}} {
- if {($times == "") || (!$times)} {return ""}
- for {set buffer 1;set return ""} {$buffer <= $times} {incr buffer 1} {
-  append return $string
- };return $return
-}
-
 #return: chan string has_access access_type message warnings expire
 proc mc:bw:inter:examin {arg idx hand ar} {
  global mc_bw
@@ -1331,169 +1391,31 @@ proc mc:bw:inter:chanflagison {chan flag} {
   if {[string range $info 1 end] != [string tolower $flag]} {continue}
   if {[string index $info 0] == "-"} {
    return 0
-  } elseif {[string index $info 0] == "+"} {return 1} else {continue}
+  } elseif {[string index $info 0] == "+"} {return 1} else {return 0}
  };return 0
 }
 
 proc mc:bw:inter:masktype {uhost type} {
- switch -- $type {
-  0 {set ban "*[string range $uhost [string first ! $uhost] end]"}
-  1 {set ban "*!*[string trimleft [string range $uhost [expr [string first ! $uhost]+1] end] "~"]"}
-  2 {set ban "*!*[string range $uhost [string first @ $uhost] end]"}
-  3 {
-   set ident [string range $uhost [expr [string first ! $uhost]+1] [expr [string last @ $uhost]-1]]
-   set ban "*!*[string trimleft $ident "~"][string range [maskhost $uhost] [string first @ [maskhost $uhost]] end]"
-  }
-  4 {set ban "*!*[string range [maskhost $uhost] [string last "@" [maskhost $uhost]] end]"}
-  5 {set ban $uhost}
-  6 {
-   set nick [string range $uhost 0 [expr [string first "!" $uhost]-1]]
-   set ident [string range $uhost [expr [string first "!" $uhost]+1] [expr [string last "@" $uhost]-1]]
-   set ban "$nick!*[string trimleft $ident "~"][string range $uhost [string last "@" $uhost] end]"
-  }
-  7 {
-   set nick [string range $uhost 0 [expr [string first "!" $uhost]-1]]
-   set ban "$nick!*[string range $uhost [string last "@" $uhost] end]"
-  }
-  8 {
-   set nick [string range $uhost 0 [expr [string first "!" $uhost]-1]]
-   set ident [string range $uhost [expr [string first "!" $uhost]+1] [expr [string last "@" $uhost]-1]]
-   set ban "$nick!*[string trimleft $ident "~"][string range [maskhost $uhost] [string last "@" [maskhost $uhost]] end]"
-  }
-  9 {
-   set nick [string range $uhost 0 [expr [string first "!" $uhost]-1]]
-   set ban "$nick!*[string range [maskhost $uhost] [string last "@" [maskhost $uhost]] end]"
-  }
-  10 {
-   set host [string range $uhost [string last "@" $uhost] end]
-   if {[mc:bw:inter:findip [string range $host 1 e]] == "0"} {
-    set host [mc:bw:inter:replace $host "1 ? 2 ? 3 ? 4 ? 5 ? 6 ? 7 ? 8 ? 9 ? 0 ?"]
-    set ident [string range $uhost [expr [string first "!" $uhost]+1] [expr [string last "@" $uhost]-1]]
-    set ban "*!$ident$host"
-   } {set ban [mc:bw:inter:masktype $uhost 0]}
-  }
-  11 {
-   set host [string range $uhost [string last "@" $uhost] end]
-   if {[mc:bw:inter:findip [string range $host 1 e]] == "0"} {
-    set host [mc:bw:inter:replace $host "1 ? 2 ? 3 ? 4 ? 5 ? 6 ? 7 ? 8 ? 9 ? 0 ?"]
-    set ident [string range $uhost [expr [string first "!" $uhost]+1] [expr [string last "@" $uhost]-1]]
-    set ban "*!*[string trimleft $ident "~"]$host"
-   } {set ban [mc:bw:inter:masktype $uhost 1]}
-  }
-  12 {
-   set host [string range $uhost [string last "@" $uhost] end]
-   if {[mc:bw:inter:findip [string range $host 1 e]] == "0"} {
-    set host [mc:bw:inter:replace $host "1 ? 2 ? 3 ? 4 ? 5 ? 6 ? 7 ? 8 ? 9 ? 0 ?"]
-    set ban "*!*$host"
-   } {set ban [mc:bw:inter:masktype $uhost 2]}
-  }
-  13 {
-   set host [string range $uhost [string last "@" $uhost] end]
-   if {[mc:bw:inter:findip [string range $host 1 e]] == "0"} {
-    set ban [mc:bw:inter:masktype $uhost 11]
-    } {set ban [mc:bw:inter:masktype $uhost 3]
-   }
-  }
-  14 {
-   set host [string range $uhost [string last "@" $uhost] end]
-   if {[mc:bw:inter:findip [string range $host 1 e]] == "0"} {
-    set ban [mc:bw:inter:masktype $uhost 12]
-   } {set ban [mc:bw:inter:masktype $uhost 4]}
-  }
-  15 {
-   set host [string range $uhost [string last "@" $uhost] end]
-   if {[mc:bw:inter:findip [string range $host 1 e]] == "0"} {
-    set host [mc:bw:inter:replace $host "1 ? 2 ? 3 ? 4 ? 5 ? 6 ? 7 ? 8 ? 9 ? 0 ?"]
-    set rest [string range $uhost 0 [expr [string last "@" $uhost]-1]]
-    set ban $rest$host
-   } {set ban [mc:bw:inter:masktype $uhost 5]}
-  }
-  16 {
-   set host [string range $uhost [string last "@" $uhost] end]
-   if {[mc:bw:inter:findip [string range $host 1 e]] == "0"} {
-    set host [mc:bw:inter:replace $host "1 ? 2 ? 3 ? 4 ? 5 ? 6 ? 7 ? 8 ? 9 ? 0 ?"]
-    set rest "[string range $uhost 0 [expr [string first "!" $uhost]-1]]!*[string trimleft [string range $uhost [expr [string first "!" $uhost]+1] [expr [string last "@" $uhost]-1]] "~"]"
-    set ban $rest$host
-   } {set ban [mc:bw:inter:masktype $uhost 6]}
-  }
-  17 {
-   set host [string range $uhost [string last "@" $uhost] end]
-   if {[mc:bw:inter:findip [string range $host 1 e]] == "0"} {
-    set host [mc:bw:inter:replace $host "1 ? 2 ? 3 ? 4 ? 5 ? 6 ? 7 ? 8 ? 9 ? 0 ?"]
-    set rest "[string range $uhost 0 [expr [string first "!" $uhost]-1]]!*"
-    set ban $rest$host 
-   } {set ban [mc:bw:inter:masktype $uhost 7]}
-  }
-  18 {
-   set host [string range $uhost [string last "@" $uhost] end]
-   if {[mc:bw:inter:findip [string range $host 1 e]] == "0"} {
-    set ban [mc:bw:inter:masktype $uhost 16]
-   } {set ban [mc:bw:inter:masktype $uhost 8]}
-  }
-  19 {
-   set host [string range $uhost [string last "@" $uhost] end]
-   if {[mc:bw:inter:findip [string range $host 1 e]] == "0"} {
-    set ban [mc:bw:inter:masktype $uhost 17]
-   } {set ban [mc:bw:inter:masktype $uhost 9]}
-  }
-  return_nothing {set ban ""}
-  default {set ban "*!*[string range $uhost [string first "@" $uhost] end]"}
+ set ident_max-length 9
+ set host_max-length 63
+ scan $uhost {%[^!]!%[^@]@%s} nick ident host
+ set maskhost 1
+ if {[regexp -- {^1[0-9]$} $type]} {
+  if {!([regexp -- {^([0-9][0-9]?[0-9]?)\.([0-9][0-9]?[0-9]?)\.([0-9][0-9]?[0-9]?)\.([0-9][0-9]?[0-9]?)$} $host temp a b c d] && ($a > 0 && $a < 255 && $b < 255 && $c < 255 && $d < 255))} {
+   regsub -all {[0-9]} $host "?" host
+   set maskhost 0
+  };set type [string index $type 1]
  }
- set _nick [string range $ban 0 [expr [string first ! $ban]-1]]
- set _ident [string range $ban [expr [string first ! $ban]+1] [expr [string last @ $ban]-1]]
- set _host [string range $ban [expr [string last @ $ban]+1] end]
- if {$_ident != [set temp [string range $_ident [expr [string length $_ident]-9] end]]} {
-  set _ident *[string trimleft $temp *]
+ if {[regexp -- {^[0-4]$} $type]} {set nick "*"}
+ if {[regexp -- {^[2479]$} $type]} {set ident "*"}
+ if {[regexp -- {^[1368]$} $type]} {set ident "*[string trimleft $ident ~]"}
+ if {[regexp -- {^[3489]$} $type]} {if {$maskhost} {scan [maskhost $host] {%[^@]@%s} temp host}}
+ if {[string length $ident] > ${ident_max-length}} {
+  set ident "*[string range $ident [expr [string length $ident]-${ident_max-length}] end]"
  }
- if {$_host != [set temp [string range $_host [expr [string length $_host]-63] end]]} {
-  set _host *[string trimleft $temp *]
- } ; return $_nick!$_ident@$_host
-}
-
-proc mc:bw:inter:findip {args} {
- catch {unset mc_found_ip}
- if {![string match *.*.*.* $args]} {return 0}
- foreach arg $args {
-  if {[string match *.*.*.* $arg]} {
-   set mc_testa [split $arg "."] ; set i 0
-   while {[llength $mc_testa] != $i} {
-    set mc_test [lrange $mc_testa $i end]
-    if {[string length [lindex $mc_test 1]]<4 && [string length [lindex $mc_test 2]]<4} {
-     if {[lindex $mc_test 1] < 256 && [lindex $mc_test 2] < 256 && [lindex $mc_test 1] >= 0 && [lindex $mc_test 2] >= 0} {
-      set first "abcdefghi"
-      if {[string index [lindex $mc_test 0] [expr [string length [lindex $mc_test 0]] - 1]] <= 9 && [string index [lindex $mc_test 0] [expr [string length [lindex $mc_test 0]] - 1]] >= 0} {
-       set first [string range [lindex $mc_test 0] [expr [string length [lindex $mc_test 0]] - 1] end]
-       if {[string index [lindex $mc_test 0] [expr [string length [lindex $mc_test 0]] - 2]] <= 9 && [string index [lindex $mc_test 0] [expr [string length [lindex $mc_test 0]] - 2]] >= 0} {
-        set first [string range [lindex $mc_test 0] [expr [string length [lindex $mc_test 0]] - 2] end]
-        if {[string index [lindex $mc_test 0] [expr [string length [lindex $mc_test 0]] - 3]] <= 9 && [string index [lindex $mc_test 0] [expr [string length [lindex $mc_test 0]] - 3]] >= 0} {
-         set first [string range [lindex $mc_test 0] [expr [string length [lindex $mc_test 0]] - 3] end]
-        }
-       }
-      }
-      set second [lindex $mc_test 1] ; set third [lindex $mc_test 2] ; set fourth "abcdefghi"
-      if {[string index [lindex $mc_test 3] 0] <= 9 && [string index [lindex $mc_test 3] 0] >= 0} {
-       set fourth [string index [lindex $mc_test 3] 0]
-       if {[string index [lindex $mc_test 3] 1] <= 9 && [string index [lindex $mc_test 3] 1] >= 0} {
-        set fourth $fourth[string index [lindex $mc_test 3] 1]
-        if {[string index [lindex $mc_test 3] 2] <= 9 && [string index [lindex $mc_test 3] 2] >= 0} {
-         set fourth $fourth[string index [lindex $mc_test 3] 2]
-        }
-       }
-      }
-      if {($first < 256) && ($second < 256) && ($third < 256) &&
-          ($fourth < 256) && ($first > 0) && ($second > 0) &&
-          ($third > 0) && ($fourth > 0) && ([string index $first 0] > 0) &&
-          ([string index $second 0] > 0) && ([string index $third 0] > 0) &&
-          ([string index $fourth 0] > 0)} {
-       if {[info exists mc_found_ip]} {
-        set mc_found_ip "$mc_found_ip $first.$second.$third.$fourth"
-       } {set mc_found_ip $first.$second.$third.$fourth}
-      }
-     }
-    } ; incr i +1
-   }
-  }
- } ; if {[info exists mc_found_ip]} {return $mc_found_ip} {return 0}
+ if {[string length $host] > ${host_max-length}} {
+  set host "*[string range $host [expr [string length $host]-${host_max-length}] end]"
+ }; return [format "%s!%s@%s" $nick $ident $host]
 }
 
 if {$mc_bw(svs:enabled)} {
@@ -1537,7 +1459,10 @@ proc mc:bw:svs:interface {idx args} {
       };if {$cont} {continue}
      }
      switch -- [sendnote SVS $notify $outnote] {
-      0 {putlog "MC SVS for [lindex $mc_bw(svs:script) 0] had some errors updating $notify on current version of script; unknown reason!"}
+      0 {
+       if {![validuser $notify]} {set x "invalid user"} else {set x "unknown reason"}
+       putlog "MC SVS for [lindex $mc_bw(svs:script) 0] had some errors updating $notify on current version of script; $x"
+      }
       3 {putlog "MC SVS for [lindex $mc_bw(svs:script) 0] had some errors updating $notify on current version of script; notebox too full!"}
      }
     }
