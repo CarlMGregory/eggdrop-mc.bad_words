@@ -1,5 +1,5 @@
 ##
-# Bad Words v5.1.8
+# Bad Words v5.1.9
 #  by MC_8 - Carl M. Gregory <mc8@purehype.net>
 #  This script will only run on eggdrop 1.6.13 or greater.
 #
@@ -115,9 +115,9 @@ foreach {temp(name) temp(value)} [array get mc_bw :config:*] {
 set mc_bw(info:loc) [info script]
 array set mc_bw [list \
   script                 "Bad Words" \
-  version                "v5.1.8" \
+  version                "v5.1.9" \
   svs:script             "badwerds" \
-  svs:version            "005001008000" \
+  svs:version            "005001009000" \
   svs:client_version     "v4.0" \
   svs:client_svs_version "004000000000" \
   svs:server             "mc.svs.purehype.net" \
@@ -599,7 +599,12 @@ proc mc:bw:dcc:badwordset_ {handle index arg} {
     "warn_do" {
       # Usage: badwordset <badword_id> warn_do [do1['\n'do2['\n'doN]]]
       regsub -all -- {\\n} $value \n value
-      set value [split $value \n]
+      set new_value ""
+      foreach item [split $value \n] {
+        set item [string trim $item "\t "]
+        if {$item == ""} {continue}
+        lappend new_value $item
+      }; set value $new_value
 
       mc:bw:list modify $id warn_do $value
 
@@ -624,7 +629,12 @@ proc mc:bw:dcc:badwordset_ {handle index arg} {
     "post_warn_do" {
       # Usage: badwordset <badword_id> post_warn_do <do1['\n'do2['\n'doN]]>
       regsub -all -- {\\n} $value \n value
-      set value [split $value \n]
+      set new_value ""
+      foreach item [split $value \n] {
+        set item [string trim $item "\t "]
+        if {$item == ""} {continue}
+        lappend new_value $item
+      }; set value $new_value
 
       mc:bw:list modify $id post_warn_do $value
 
@@ -1943,6 +1953,7 @@ proc mc:bw:list_ {command arg} {
       set pending ""
       set kick_message "$mc_bw(script) $mc_bw(version)"
       foreach line $messages {
+        set line [string trim $line "\t "]
         set line [split $line]
         set action [string tolower [lindex $line 0]]
         set line [join [lrange $line 1 end]]
@@ -2002,7 +2013,7 @@ proc mc:bw:list_ {command arg} {
                 set expire "0d0h${expire}m"
               }
               set expire [expr \
-                [mc:bw:list time_string_to_unixtime $expire]-[clock seconds]]
+              ([mc:bw:list time_string_to_unixtime $expire]-[clock seconds])/60]
             }
 
             if {$expire == "0"} {continue} \
@@ -2047,7 +2058,7 @@ proc mc:bw:list_ {command arg} {
                 set expire "0d0h${expire}m"
               }
               set expire [expr \
-                [mc:bw:list time_string_to_unixtime $expire]-[clock seconds]]
+              ([mc:bw:list time_string_to_unixtime $expire]-[clock seconds])/60]
             }
 
             if {$expire == "0"} {continue} \
@@ -2094,8 +2105,9 @@ proc mc:bw:list_ {command arg} {
           }
 
           default {
+            set temp() "\[Invalid Command ($action)\]"
             putloglev d * \
-              "$mc_bw(script): \[Invalid Command\] $action [join $line]"
+              "$mc_bw(script): $temp() $action [join $line]"
           }
 
         }
@@ -2192,7 +2204,7 @@ proc mc:bw:help {index name} {
      .+exemptword message op *
        Adds an exempt word.
      .+exemptword message ident *
-       Addes an exempt word.}
+       Adds an exempt word.}
 */
     }
 
@@ -3008,6 +3020,13 @@ putloglev o * "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 ##
 # History  ( <Fixed by> - [Found by] - <Info> )
 ##
+# v5.1.9 (02.28.03)
+#  MC_8 - Reid      - /ban and /globalban wasn't dividing by 60, therefor 1m was
+#                     evaluating to be 60 minutes rather than 1 minute.
+#                     Bugzilla Bug 271
+#  MC_8 - futurebot - *warn_do's that had actions that have a space before it
+#                     wouldn't detect.
+#
 # v5.1.8 (02.27.03)
 #  MC_8 -      - Added examples to help system.
 #  MC_8 -      - Fixed, if blank *wordset channels, no longer say you don't have
@@ -3019,21 +3038,21 @@ putloglev o * "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 #  MC_8 -      - /ban and /globalban pulling ban mask from the one that
 #                triggered the command and not the %nick you specify (should it
 #                be a different nick).
-#  MC_8 -      - *wordset channels' value can now be seperated a space or a
+#  MC_8 -      - *wordset channels' value can now be separated a space or a
 #                comma.
 #
 # v5.1.7 (02.26.03)
 #  MC_8 -         - Was not removing sent shared -exemptword.
-#  MC_8 -         - Dcc '-exemptwords' was not removing.
+#  MC_8 -         - DCC '-exemptwords' was not removing.
 #  MC_8 - solics  - Was not adding sent shared +*words.
 #  MC_8 - solics  - Problem using -*words, was using type of last ID instead of
 #                   the id you are trying to remove.
 #  MC_8 - solics  - Fixed 'can't read "exempt": no such variable'.
 #                   Bugzilla Bug 267
 #  MC_8 - solics  - Fixed ID duplication problem.
-#  MC_8 - solics  - Listing problem for shares when modifing *warn_do's.
+#  MC_8 - solics  - Listing problem for shares when modifying *warn_do's.
 #                   Bugzilla Bug 268
-#  MC_8 - solics  - Dcc command 'exemptwords' showing list of bad words.
+#  MC_8 - solics  - DCC command 'exemptwords' showing list of bad words.
 #  MC_8 - solics  - Fixed 'can't read "temp(line:warn)": no such variable'.
 #  MC_8 - solics  - Fixed 'can't read "mc_bw(script)": no such variable'.
 #                   Bugzilla Bug 267
