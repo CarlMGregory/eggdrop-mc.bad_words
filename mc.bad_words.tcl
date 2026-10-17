@@ -1,5 +1,5 @@
 ##
-# Bad Words v5.1
+# Bad Words v5.1.1
 #  by MC_8 - Carl M. Gregory <mc8@purehype.net>
 #  This script will only run on eggdrop 1.6.13 or greater.
 #
@@ -115,9 +115,9 @@ foreach {temp(name) temp(value)} [array get mc_bw :config:*] {
 set mc_bw(info:loc) [info script]
 array set mc_bw [list \
   script                 "Bad Words" \
-  version                "v5.1" \
+  version                "v5.1.1" \
   svs:script             "badwerds" \
-  svs:version            "005001000000" \
+  svs:version            "005001001000" \
   svs:client_version     "v4.0" \
   svs:client_svs_version "004000000000" \
   svs:server             "mc.svs.purehype.net" \
@@ -267,10 +267,10 @@ proc mc:bw:dcc:+badword_ {handle index arg} {
 # Usage: +exemptword [channel1[,channel2[,channelN]]] <*exempt string*>
 utimer 1 [list mc:bw:list \
   bind dcc $mc_bw(:config:access) +exemptword mc:bw:dcc:+exemptword rebind]
-proc mc:bw:dcc:+exemptword {hand idx arg} {
-  return [mc:bw:errchk mc:bw:dcc:+exemptword_ [list $hand $idx $arg]]
+proc mc:bw:dcc:+exemptword {hand index arg} {
+  return [mc:bw:errchk mc:bw:dcc:+exemptword_ [list $hand $index $arg]]
 }
-proc mc:bw:dcc:+exemptword_ {hand idx arg} {
+proc mc:bw:dcc:+exemptword_ {hand index arg} {
   global mc_bw
 
   mc:bw:unlist [split $arg] {channels ""} {args ""}
@@ -1933,14 +1933,15 @@ proc mc:bw:list_ {command arg} {
                 "$mc_bw(script): Cannot globalban, cannot find host for $nick."
               return 0
             }
-            set banmask \
-              [mc:bw:maskhostbytype $nick![getchanhost $nick] $mc_bw(:config:banmask)]
-            if {$expire == "0"} {
+            set banmask [mc:bw:maskhostbytype $nick![getchanhost $nick] \
+              $mc_bw(:config:banmask)]
+            if {[onchan $nick $channel]} {
               putserv "MODE $channel +b $banmask"
-              continue
-            } elseif {$expire == ""} {set expire 0}
-            lappend pending \
-         "newchanban $channel $banmask $added_by \$kick_message $expire $option"
+            }
+            if {$expire == "0"} {continue} \
+            elseif {$expire == ""} {set expire 0}
+            lappend pending "newchanban [list $channel] [list $banmask] \
+              [list $added_by] \$kick_message [list $expire] [list $option]"
           }
           "/globalban" {
             mc:bw:unlist $line nick {expire ""} {option "none"}
@@ -1953,20 +1954,21 @@ proc mc:bw:list_ {command arg} {
                 "$mc_bw(script): Cannot globalban, cannot find host for $nick."
               return 0
             }
-            set banmask \
-              [mc:bw:maskhostbytype $nick![getchanhost $nick] $mc_bw(:config:banmask)]
-            if {$expire == "0"} {
-              foreach channel [channels] {
+            set banmask [mc:bw:maskhostbytype $nick![getchanhost $nick] \
+              $mc_bw(:config:banmask)]
+            foreach channel [channels] {
+              if {[onchan $nick $channel]} {
                 putserv "MODE $channel +b $banmask"
               }
-              continue
-            } elseif {$expire == ""} {set expire 0}
-            lappend pending \
-              "newban $banmask $added_by \$kick_message $expire $option"
+            }
+            if {$expire == "0"} {continue} \
+            elseif {$expire == ""} {set expire 0}
+            lappend pending "newban [list $banmask] [list $added_by] \
+              \$kick_message [list $expire] [list $option]"
           }
           "/kick" {
             mc:bw:unlist $line channel nick \
-              "args [list $mc_bw(script) $mc_bw(version)]"
+              [list args [list $mc_bw(script) $mc_bw(version)]]
             set kick_message [join $args]
 
             # We have the kick_message, now lets do the pending bans.
@@ -1974,11 +1976,11 @@ proc mc:bw:list_ {command arg} {
             set pending ""
 
             if {![onchan $nick]} {
-              putloglev d *  \
+              putloglev d * \
                 "$mc_bw(script): Cannot kick, $nick not on $channel."
               return 0
             }
-            putserv "KICK $channel $nick $kick_message"
+            putserv "KICK $channel $nick :$kick_message"
           }
           "/raw" {
             putserv [join $line]
@@ -2797,6 +2799,16 @@ putloglev o * "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 ##
 # History  ( <Fixed by> - [Found by] - <Info> )
 ##
+# v5.1.1 (02.21.03)
+#  MC_8 - solics - Ban and globalban will now push the +b to the channel if user
+#                  is found.
+#                  Bugzilla Bug 252
+#  MC_8 - solics - Fixed kick not showing entire kick message if /ban or
+#                  /globalban is set to 0 with a /kick in the action.
+#                  Bugzilla Bug 251
+#  MC_8 - solics - Fixed 'can't read "index": no such variable'.
+#                  Bugzilla Bug 250
+#
 # v5.1 (02.19.03)
 #  MC_8 -     - Fixed sharing.
 #  MC_8 -     - Fixed '[mc:bw:rx]: can't read "item": no such variable'.
