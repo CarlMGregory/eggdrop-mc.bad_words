@@ -1,5 +1,5 @@
 ##
-# Bad Words v5.1.9
+# Bad Words v5.1.10
 #  by MC_8 - Carl M. Gregory <mc8@purehype.net>
 #  This script will only run on eggdrop 1.6.13 or greater.
 #
@@ -42,10 +42,9 @@
 ##
 #
 
-# What user restriction should be set on the DCC console commands (listed
-# above).  Access is restricted on a flag basis, syntax is GLOBAL|CHANNEL.  Set
-# this to "-|-" to give access to anyone (assuming they can DCC chat to the
-# bot).
+# What user restriction should be set on the DCC console commands.  Access is
+# restricted on a flag basis, syntax is GLOBAL|CHANNEL.  Set this to "-|-" to
+# give access to anyone (assuming they can DCC chat to the bot).
 set mc_bw(:config:access) "m|m"
 
 # How do you want to mask bans?
@@ -115,9 +114,9 @@ foreach {temp(name) temp(value)} [array get mc_bw :config:*] {
 set mc_bw(info:loc) [info script]
 array set mc_bw [list \
   script                 "Bad Words" \
-  version                "v5.1.9" \
+  version                "v5.1.10" \
   svs:script             "badwerds" \
-  svs:version            "005001009000" \
+  svs:version            "005001010000" \
   svs:client_version     "v4.0" \
   svs:client_svs_version "004000000000" \
   svs:server             "mc.svs.purehype.net" \
@@ -1863,15 +1862,21 @@ proc mc:bw:list_ {command arg} {
 
         set string [mc:bw:list get_value_from_line string $line]
         set string [mc:bw:replace -- $string [list %botnick $::botnick]]
+        set id [mc:bw:list get_value_from_line id $line]
         set use_regexp \
           [mc:bw:list get_value_from_line use_regexp $line]
         if {$use_regexp == ""} {set use_regexp 0}
-        if {(($use_regexp) && (![regexp -- $string $evaluate_text])) ||
-            ((!$use_regexp) && (![string match $string $evaluate_text]))} {
+        if {$use_regexp} {
+          if {[catch {regexp -- $string $evaluate_text} error]} {
+            set temp(1) "Regular expression problem with ID $id"
+            putloglev d * "$mc_bw(script): $temp(1), error: $error"
+            continue
+          }
+          if {!$error} {continue}
+        } elseif {![string match $string $evaluate_text]} {
           continue
         }
 
-        set id [mc:bw:list get_value_from_line id $line]
         mc:bw:list modify $id last_used [clock seconds]
         return 0
       }
@@ -1902,16 +1907,21 @@ proc mc:bw:list_ {command arg} {
 
         set string [mc:bw:list get_value_from_line string $line]
         set string [mc:bw:replace -- $string [list %botnick $::botnick]]
+        set id [mc:bw:list get_value_from_line id $line]
         set use_regexp \
           [mc:bw:list get_value_from_line use_regexp $line]
         if {$use_regexp == ""} {set use_regexp 0}
-
-        if {(($use_regexp) && (![regexp -- $string $evaluate_text])) ||
-            ((!$use_regexp) && (![string match $string $evaluate_text]))} {
+        if {$use_regexp} {
+          if {[catch {regexp -- $string $evaluate_text} error]} {
+            set temp(1) "Regular expression problem with ID $id"
+            putloglev d * "$mc_bw(script): $temp(1), error: $error"
+            continue
+          }
+          if {!$error} {continue}
+        } elseif {![string match $string $evaluate_text]} {
           continue
         }
 
-        set id [mc:bw:list get_value_from_line id $line]
         mc:bw:list modify $id last_used [clock seconds]
         set match 1
         break
@@ -1932,7 +1942,7 @@ proc mc:bw:list_ {command arg} {
           putloglev o * \
             "$mc_bw(script): $temp() on $channel, doing warn_do."
           mc:bw:list process_messages \
-            $warn_do $nick $uhost $channel $string $added_by
+            $warn_do $nick $uhost $channel $string $added_by warn_do $id
           incr mc_bw($warn_ary)
           return 1
         }
@@ -1944,11 +1954,27 @@ proc mc:bw:list_ {command arg} {
       putloglev o * \
         "$mc_bw(script): $temp() on $channel, doing post_warn_do."
       mc:bw:list process_messages $post_warn_do $nick $uhost $channel $string \
-        $added_by
+        $added_by post_warn_do $id
     }
 
     "process_messages" {
-      mc:bw:unlist $args messages nick uhost channel string added_by
+      mc:bw:unlist $args messages nick uhost channel string added_by type id
+
+      if {[string match {*\\n*} $messages]} {
+        set temp(1) "Error processing commands for ID $id"
+        set temp(2) "did you manually edit the datafile"
+        putloglev d * "$mc_bw(script): $temp(1), $temp(2)?  Auto converting..."
+
+        regsub -all -- {\\n} $messages \n messages
+        set new_value ""
+        foreach item [split $messages \n] {
+          set item [string trim $item "\t "]
+          if {$item == ""} {continue}
+          lappend new_value $item
+        }; set messages $new_value
+
+        mc:bw:list modify $id $type $messages
+      }
 
       set pending ""
       set kick_message "$mc_bw(script) $mc_bw(version)"
@@ -1989,7 +2015,7 @@ proc mc:bw:list_ {command arg} {
             if {![validchan $channel_]} {
               mc:bw:list process_messages \
                 [list "/globalban %nick $expire $option"] $nick $uhost \
-                  $channel $string
+                  $channel $string $type $id
               continue
             }
 
@@ -2163,7 +2189,23 @@ proc mc:bw:help {index name} {
    badwordset    exemptwordset
 
  For help on a particular command, do:
-   help <command>"
+   help <command>
+
+ ------------------------------------------------------------------------------
+
+ There are also 3 chanset's available for exempting based on channel status
+ rather than flags.
+   <+/->mc.bad_words.exempt_op
+   <+/->mc.bad_words.exempt_voice
+   <+/->mc.bad_words.exempt_halfop           -- If your eggdrop supports halfop.
+
+ Example:
+   .chanset #eggdrop +mc.bad_words.exempt_op
+     This will exempt ops from the bad words, regardless if there added to the
+     userlist or not.
+   .chanset #eggdrop +mc.bad_words.exempt_voice
+     This will exempt voices from the bad words, regardless if there added to
+     the userlist or not."
 */
     }
 
@@ -3020,6 +3062,15 @@ putloglev o * "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 ##
 # History  ( <Fixed by> - [Found by] - <Info> )
 ##
+# v5.1.10 (04.19.03) <not released>
+#  MC_8 - Chris - Added auto conversion on process_message if detection of a \n
+#                 in *warn_do's, happens when someone manually edits the
+#                 datafile incorrectly.
+#                 Bugzilla Bug 280
+#  MC_8 - Chris - Added debug catching for regular expression matching.
+#                 Bugzilla Bug 281
+#  MC_8 - flaws - Added chanset's to '.help mc.bad_words'.
+#
 # v5.1.9 (02.28.03)
 #  MC_8 - Reid      - /ban and /globalban wasn't dividing by 60, therefor 1m was
 #                     evaluating to be 60 minutes rather than 1 minute.
