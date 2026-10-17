@@ -1,5 +1,5 @@
 ##
-# Bad Words v5.1.1
+# Bad Words v5.1.2
 #  by MC_8 - Carl M. Gregory <mc8@purehype.net>
 #  This script will only run on eggdrop 1.6.13 or greater.
 #
@@ -13,7 +13,7 @@
 # Description
 ##
 # This script will act upon anyone in a specified channel that mentions a
-# certain word that you add to the bad words database (wildcards accepted).
+# certain word that you add to the bad words database (wild cards accepted).
 # Such actions popular are /kick and /ban, but can do more.  This script also
 # has the ability to share it's bad words database with other bot's on the
 # botnet.
@@ -26,7 +26,7 @@
 # I use this script to ban those whom spam other channels as well as websites n`
 # such.  If you do the same, I suggest using mc.spam_check as well.
 #
-# Please note that this script can handle channels with extended ascii
+# Please note that this script can handle channels with extended ASCII
 # character, but only if your using TCL 8.2 or better.
 ##
 
@@ -42,9 +42,9 @@
 ##
 #
 
-# What user restriction should be set on the dcc console commands (listed
+# What user restriction should be set on the DCC console commands (listed
 # above).  Access is restricted on a flag basis, syntax is GLOBAL|CHANNEL.  Set
-# this to "-|-" to give access to anyone (assuming they can dcc chat to the
+# this to "-|-" to give access to anyone (assuming they can DCC chat to the
 # bot).
 set mc_bw(:config:access) "m|m"
 
@@ -74,7 +74,7 @@ set mc_bw(:config:banmask) 11
 # "B".  This setting is here just incase another script uses the "B" custom flag
 # (as not conflict, so it's changeable).  Valid flags here can be A through Z
 # (capital letters ONLY), and pertain to global flags.  You can set this to ""
-# to disable sharing.  To add another bot to the sharing list, in dcc chat all
+# to disable sharing.  To add another bot to the sharing list, in DCC chat all
 # you have to do is '.chattr <bot> +B'.
 set mc_bw(:config:share:flag) "B"
 
@@ -115,9 +115,9 @@ foreach {temp(name) temp(value)} [array get mc_bw :config:*] {
 set mc_bw(info:loc) [info script]
 array set mc_bw [list \
   script                 "Bad Words" \
-  version                "v5.1.1" \
+  version                "v5.1.2" \
   svs:script             "badwerds" \
-  svs:version            "005001001000" \
+  svs:version            "005001002000" \
   svs:client_version     "v4.0" \
   svs:client_svs_version "004000000000" \
   svs:server             "mc.svs.purehype.net" \
@@ -233,7 +233,7 @@ proc mc:bw:dcc:+badword_ {handle index arg} {
       break
     }
     if {$temp()} {
-      set string $channels
+      set string "$channels $string"
       set channels "global"
     } else {
       set channels [split $channels ,]
@@ -279,7 +279,22 @@ proc mc:bw:dcc:+exemptword_ {hand index arg} {
     set string $channels
     set channels "global"
   } else {
-    set channels [split $channels ,]
+    set temp() 0
+    foreach channel [split $channels ,] {
+      if {[validchan $channel] ||
+          ($channel == "message") ||
+          ($channel == "global")} {
+        continue
+      }
+      set temp() 1
+      break
+    }
+    if {$temp()} {
+      set string "$channels $string"
+      set channels "global"
+    } else {
+      set channels [split $channels ,]
+    }
   }
 
   if {[regexp -- {^(-?(-h(elp)?|-\?|-s(yntax)?))?$} $arg] || ($string == "")} {
@@ -408,7 +423,7 @@ proc mc:bw:dcc:badwords_ {handle index arg} {
     }
     foreach {name value} [list added_time 0 expire 0 use_regexp 0 strip 0 \
                                share 1 last_used 0 warn 0] {
-      if {$temp(line:$name) == ""} {set temp(line:$name) 0}
+      if {$temp(line:$name) == ""} {set temp(line:$name) $value}
     }
 
     set added_time [mc:bw:list unixtime_to_days $temp(line:added_time)]
@@ -429,8 +444,8 @@ proc mc:bw:dcc:badwords_ {handle index arg} {
 
     set strip [expr {($temp(line:strip))?"stripping mIRC color codes":""}]
     set regexp \
-      [expr {($temp(line:use_regexp)=="1")?
-        "using regular expression matching":""}]
+      [expr {($temp(line:use_regexp)=="1")?\
+      "using regular expression matching":""}]
     set sharing [expr {($temp(line:share))?"sharing":""}]
     set temp(1) [list $strip $regexp $sharing]
     set temp(2) ""
@@ -794,7 +809,7 @@ proc mc:bw:dcc:exemptwords_ {handle index arg} {
     }
     foreach {name value} [list added_time 0 expire 0 use_regexp 0 strip 0 \
                                share 1 last_used 0 warn 0] {
-      if {$temp(line:$name) == ""} {set temp(line:$name) 0}
+      if {$temp(line:$name) == ""} {set temp(line:$name) $value}
     }
 
     set added_time [mc:bw:list unixtime_to_days $temp(line:added_time)]
@@ -1035,7 +1050,7 @@ proc mc:bw:link_ {bot via} {mc:bw:share:tx get $bot}
 
 # Send keyword via encryption of the mc:bw:$key.
 # Send data via encryption of the $key+$from, first index should be $from.
-# Incomming message, list format:  <from> <message>
+# Incoming message, list format:  <from> <message>
 
 utimer 1 [list mc:bw:list bind bot - \
   [encrypt $mc_bw(:config:share:key) mc:bw:$mc_bw(:config:share:key)] mc:bw:rx rebind]
@@ -1048,7 +1063,7 @@ proc mc:bw:rx_ {from command arg} {
   set arg [decrypt "$mc_bw(:config:share:key)+$from" $arg]
   set arg [mc:bw:2list $arg]
   if {[lindex $arg 0] != $from} {
-    putloglev o - "$mc_bw(script): Fake message recieved. (!= $from)"
+    putloglev o - "$mc_bw(script): Fake message received. (!= $from)"
     return 0
   }
 
@@ -1082,7 +1097,7 @@ proc mc:bw:rx_ {from command arg} {
     }
 
     "synch_start" {
-      putloglev b * "$mc_bw(script): Recieving bad words database from $from..."
+      putloglev b * "$mc_bw(script): Receiving bad words database from $from..."
     }
 
     "synch" {
@@ -1098,7 +1113,7 @@ proc mc:bw:rx_ {from command arg} {
     }
 
     "synch_stop" {
-      putloglev b * "$mc_bw(script): Recieved bad words database from $from."
+      putloglev b * "$mc_bw(script): received bad words database from $from."
       mc:bw:list save -quiet
       mc:bw:list setup_binds
     }
@@ -1516,7 +1531,7 @@ proc mc:bw:list_ {command arg} {
     }
 
     "unixtime_to_days" {
-      # Convert incomming unixtime to the number of days it has been since then.
+      # Convert incoming unixtime to the number of days it has been since then.
 
       # in: unixtime
       #out: x day(s) || hh:mm
@@ -1814,6 +1829,7 @@ proc mc:bw:list_ {command arg} {
         } else {set evaluate_text $text}
 
         set string [mc:bw:list get_value_from_line string $line]
+        set string [mc:bw:replace -- $string [list %botnick $::botnick]]
         set use_regexp \
           [mc:bw:list get_value_from_line use_regexp $line]
         if {$use_regexp == ""} {set use_regexp 0}
@@ -1852,6 +1868,7 @@ proc mc:bw:list_ {command arg} {
         } else {set evaluate_text $text}
 
         set string [mc:bw:list get_value_from_line string $line]
+        set string [mc:bw:replace -- $string [list %botnick $::botnick]]
         set use_regexp \
           [mc:bw:list get_value_from_line use_regexp $line]
         if {$use_regexp == ""} {set use_regexp 0}
@@ -1881,7 +1898,7 @@ proc mc:bw:list_ {command arg} {
           putloglev o * \
             "$mc_bw(script): $temp() on $channel, doing warn_do."
           mc:bw:list process_messages \
-            $warn_do $nick $channel $string $added_by
+            $warn_do $nick $uhost $channel $string $added_by
           incr mc_bw($warn_ary)
           return 1
         }
@@ -1892,11 +1909,12 @@ proc mc:bw:list_ {command arg} {
       set temp() "$nick matched bad word #$id ($string)"
       putloglev o * \
         "$mc_bw(script): $temp() on $channel, doing post_warn_do."
-      mc:bw:list process_messages $post_warn_do $nick $channel $string $added_by
+      mc:bw:list process_messages $post_warn_do $nick $uhost $channel $string \
+        $added_by
     }
 
     "process_messages" {
-      mc:bw:unlist $args messages nick channel string added_by
+      mc:bw:unlist $args messages nick uhost channel string added_by
 
       set pending ""
       foreach line $messages {
@@ -1905,7 +1923,8 @@ proc mc:bw:list_ {command arg} {
         set line [join [lrange $line 1 end]]
         set line [mc:bw:replace -- $line [list %nick    $nick    \
                                                %channel $channel \
-                                               %match   $string  ]]
+                                               %match   $string  \
+                                               %botnick $::botnick]]
         set line [split $line]
 
         switch -- $action {
@@ -1925,15 +1944,11 @@ proc mc:bw:list_ {command arg} {
             }
             if {![validchan $channel]} {
               mc:bw:list process_messages \
-                [list "/globalban %nick $expire $option"] $nick $channel $string
+                [list "/globalban %nick $expire $option"] $nick $uhost \
+                  $channel $string
               continue
             }
-            if {[getchanhost $nick] == ""} {
-              putloglev d *  \
-                "$mc_bw(script): Cannot globalban, cannot find host for $nick."
-              return 0
-            }
-            set banmask [mc:bw:maskhostbytype $nick![getchanhost $nick] \
+            set banmask [mc:bw:maskhostbytype $nick!$uhost \
               $mc_bw(:config:banmask)]
             if {[onchan $nick $channel]} {
               putserv "MODE $channel +b $banmask"
@@ -1949,12 +1964,7 @@ proc mc:bw:list_ {command arg} {
               set option sticky
               set expire ""
             }
-            if {[getchanhost $nick] == ""} {
-              putloglev d *  \
-                "$mc_bw(script): Cannot globalban, cannot find host for $nick."
-              return 0
-            }
-            set banmask [mc:bw:maskhostbytype $nick![getchanhost $nick] \
+            set banmask [mc:bw:maskhostbytype $nick!$uhost \
               $mc_bw(:config:banmask)]
             foreach channel [channels] {
               if {[onchan $nick $channel]} {
@@ -1984,6 +1994,9 @@ proc mc:bw:list_ {command arg} {
           }
           "/raw" {
             putserv [join $line]
+          }
+          "/tcl" {
+            uplevel #0 "eval [join $line]"
           }
         }
       }
@@ -2019,7 +2032,7 @@ proc mc:bw:help {index name} {
  ------------------------------------------------------------------------------
 
  This script will act upon anyone in a specified channel that mentions a
- certain word that you add to the bad words database (wildcards accepted).
+ certain word that you add to the bad words database (wild cards accepted).
  Such actions popular are /kick and /ban, but can do more.  This script also
  has the ability to share it's bad words database with other bot's on the
  botnet.
@@ -2027,7 +2040,7 @@ proc mc:bw:help {index name} {
  I use this script to ban those whom spam other channels as well as websites n`
  such.  If you do the same, I suggest using mc.spam_check as well.
 
- Please note that this script can handle channels with extended ascii
+ Please note that this script can handle channels with extended ASCII
  character, but only if your using TCL 8.2 or better.
 
  ------------------------------------------------------------------------------
@@ -2052,7 +2065,9 @@ proc mc:bw:help {index name} {
      well as the word message.  If global, yes... is a global badword.  If
      message, is a message only bad word (someone /msg'd it, ie, to catch spam).
      You can specify as many channels as you like, just remember to separate
-     each with a comma ','.  If not specified, default is global.}
+     each with a comma ','.  If not specified, default is global.
+   Replacement variables for *bad string* are:
+     %botnick  -- The bot's current IRC nick.}
 */
     }
 
@@ -2060,13 +2075,15 @@ proc mc:bw:help {index name} {
 /*
     set temp(help) \
 {Usage: +exemptword [channel1[,channel2[,channelN]]] <*exempt string*>
-   This will add an exempt word string to the exemp words list.
+   This will add an exempt word string to the exempt words list.
    [channel1[,channel2[,channelN]]]
-       This can either be the channel name on IRC, or the actual word global
-       as well as the word message.  If global, yes... is a global badword.  If
-       message, is a message only bad word (someone /msg'd it, ie, to catch
-       spam).  You can specify as many channels as you like, just remember to
-       separate each with a comma ','.  If not specified, default is global.}
+     This can either be the channel name on IRC, or the actual word global
+     as well as the word message.  If global, yes... is a global badword.  If
+     message, is a message only bad word (someone /msg'd it, ie, to catch
+     spam).  You can specify as many channels as you like, just remember to
+     separate each with a comma ','.  If not specified, default is global.
+   Replacement variables for *exempt string* are:
+     %botnick  -- The bot's current IRC nick.}
 */
     }
 
@@ -2173,14 +2190,14 @@ proc mc:bw:help {index name} {
                                      0, is server ban (not in bot's internal
                                      banlist).  If you specify 'sticky' at the
                                      end, it will make the ban sticky, read
-                                     '.help stick' in the dcc console.
+                                     '.help stick' in the DCC console.
      /globalban <nick> [expire] [option]
                                    - Will ban in all channels.  Expire time is
                                      in minutes.  If no expire, is perm.  If 0,
                                      is server ban (not in bot's internal
                                      banlist).  If you specify 'sticky' at the
                                      end, it will make the ban sticky, read
-                                     '.help stick' in the dcc console.
+                                     '.help stick' in the DCC console.
      /kick <channel> <nick> [reason]
                                    - Will kick <nick> from <channel>.  If reason
                                      not specified, will be 'Bad Words
@@ -2189,10 +2206,12 @@ proc mc:bw:help {index name} {
                                      server.  If you want to learn about IRC
                                      raw's, visit this site:
                           http://www.user-com.undernet.org/documents/rfc1459.txt
-   Replacment variables:
+     /tcl <information>            - Does tcl <information> (for experts).
+   Replacement variables:
      %nick    - The nick of the person that said the bad word.
      %channel - The channel it was said in.
      %match   - The badword match.
+     %botnick - The bots current IRC nickname.
    Example:
      /msg %nick You said %match, watch out!\n/raw MODE %channel -ov %nick %nick
    Extra information:
@@ -2218,14 +2237,14 @@ proc mc:bw:help {index name} {
                                        is server ban (not in bot's internal
                                        banlist).  If you specify 'sticky' at the
                                        end, it will make the ban sticky, read
-                                       '.help stick' in the dcc console.
+                                       '.help stick' in the DCC console.
      /globalban <nick> [expire] [option]
                                      - Will ban in all channels.  Expire time is
                                        in minutes.  If no expire, is perm.  If
                                        0, is server ban (not in bot's internal
                                        banlist).  If you specify 'sticky' at the
                                        end, it will make the ban sticky, read
-                                       '.help stick' in the dcc console.
+                                       '.help stick' in the DCC console.
      /kick <channel> <nick> [reason] - Will kick <nick> from <channel>.  If
                                        reason not specified, will be 'Bad Words
                                        v<version>'.
@@ -2233,10 +2252,12 @@ proc mc:bw:help {index name} {
                                        server.  If you want to learn about IRC
                                        raw's, visit this site:
                           http://www.user-com.undernet.org/documents/rfc1459.txt
-   Replacment variables:
+     /tcl <information>              - Does tcl <information> (for experts).
+   Replacement variables:
      %nick    - The nick of the person that said the bad word.
      %channel - The channel it was said in.
      %match   - The badword match.
+     %botnick - The bots current IRC nickname.
    Example:
      /msg %nick Out you go!\n/ban %channel %nick\n/raw
    Extra information:
@@ -2284,7 +2305,7 @@ proc mc:bw:help {index name} {
      v|-  (global voice)
      b|-  (bot)
     And of course, you can mix and match more than just 1.
-     bnv|ov (bot, global owner, gloval voice, channel op and channel voice)}
+     bnv|ov (bot, global owner, global voice, channel op and channel voice)}
 */
     }
 
@@ -2362,7 +2383,7 @@ proc mc:bw:help {index name} {
 */
     }
 
-    default {set temp(help) "No help avilable."}
+    default {set temp(help) "No help available."}
 
   }
 
@@ -2400,8 +2421,8 @@ proc mc:bw:filt:help {index text} {
   return $text
 }
 
-proc /* {{args ""}} {;# I use this for my syntax hilighting.}
-proc */ {{args ""}} {;# I use this for my syntax hilighting.}
+proc /* {{args ""}} {;# I use this for my syntax hi lighting.}
+proc */ {{args ""}} {;# I use this for my syntax hi lighting.}
 
 
 ## More Tools quick procs.
@@ -2799,6 +2820,24 @@ putloglev o * "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 ##
 # History  ( <Fixed by> - [Found by] - <Info> )
 ##
+# v5.1.2 (02.23.03)
+#  MC_8 -        - +exemptword without giving a channel where there exempt word
+#                  contained a space would mess up thinking the first word was
+#                  the channel.
+#  MC_8 -        - +badword; if no channel given and the bad word contains a
+#                  space, would just take the first word (separated by spaces)
+#                  as the bad word string.  Fixed.
+#  MC_8 -        - 'share' is default to on, but not showing in the list to be
+#                  on unless you actually set it -- fixed.
+#  MC_8 - solics - Added %botnick replacement variable for bad/ exempt string.
+#                  Added %botnick replacement variable for *warn_do's.
+#                  Bugzilla Bug 256
+#  MC_8 - solics - Fixed /ban and /globalban finding users host when not in a
+#                  channel.
+#                  Bugzilla Bug 254
+#  MC_8 - solics - Added a new *do command, /tcl.
+#                  Bugzilla Bug 257
+#
 # v5.1.1 (02.21.03)
 #  MC_8 - solics - Ban and globalban will now push the +b to the channel if user
 #                  is found.
@@ -2827,7 +2866,7 @@ putloglev o * "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 #
 # v5.0 (01.29.03)
 #  MC_8     -            - Upgraded SVS Client.  v3.1 -> v3.2
-#! MC_8     - nadir    \ - Rewote the entire script.  Everything has changed.
+#! MC_8     - nadir    \ - Rewrote the entire script.  Everything has changed.
 #!            heber    \   Bugzilla Bug 36
 #!            Mubarak  \   Bugzilla Bug 170
 #!            acidrain \   Bugzilla Bug 192
@@ -2853,7 +2892,7 @@ putloglev o * "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 # v4.1 (10.09.02)
 #  MC_8 -           - Upgraded SVS client.  v2.2 -> v3.1
 #  MC_8 - KrE80r    - Fixed 'invalid command name "encoding"'. [Bug: 161]
-#  MC_8 - heber     - Encoded ability to support for non ascii characters in
+#  MC_8 - heber     - Encoded ability to support for non ASCII characters in
 #                     channel names, such as `ã`.
 #                     Bugzilla number: 152
 #  MC_8 - heber     - Fixed 'invalid command name "badargs"'.
@@ -3016,8 +3055,8 @@ putloglev o * "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 #  MC_8 -       - Added prompt interface for +(bad|exempt)word.
 #  MC_8 -       - Bots were flooding "U" on load via botnet link.
 #  MC_8 -       - Bot was getting flooded down with utimers.
-#  MC_8 -       - Entrie expire time wasn't working.
-#  MC_8 -       - Added dcc commands; exemptwords, +exemptword, -exemptword
+#  MC_8 -       - Entire expire time wasn't working.
+#  MC_8 -       - Added DCC commands; exemptwords, +exemptword, -exemptword
 #  MC_8 - ckitt - Fixed 'invalid command name ...' dealing with  '("1-2" arm
 #                 line 1)' (part of the db auto conversion).
 #  MC_8 -       - Added catches to not put a kick (nor ban) on the channel if
@@ -3054,19 +3093,19 @@ putloglev o * "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 #  MC_8 - ckitt - Fixed 'TCL error [mc:bw:pubm]: invalid command name
 #                 "mc:bwerd:inter:findip"'.
 #  MC_8 - ckitt - Fixed documentation about chanset flags.
-#  MC_8 -       - Dcc command wasn't recognizing option "all".
+#  MC_8 -       - DCC command wasn't recognizing option "all".
 #  MC_8 -       - Changed the scripts name from Bad Werds to Bad Words.
 #  MC_8 -       - To many changes to document -- I rewrote the entire script.
 #
 # v2.0 (06.27.01)
 #  MC_8 - Sara    - Added a few examples within the command syntax layout.
-#  MC_8 - ICU     - Fixed +/-badword dcc command requirement for the *bad*word*.
+#  MC_8 - ICU     - Fixed +/-badword DCC command requirement for the *bad*word*.
 #  MC_8 - Rami    - Fixed `Tcl error [mc:msgm:weed]: wrong # args: should be
 #                   "foreach varList list ?varList list ...? command"`.
 #  MC_8 - KatzEye - Added ability to have perm bans, instead of timed bans.
 #  MC_8 - KatzEye - Added ability to have the ban's global or channel specific.
 #  MC_8 -         - Updated SVS to v1.2
-#  MC_8 -         - Made the badword strings settable via dcc (on the fly)
+#  MC_8 -         - Made the badword strings set able via DCC (on the fly)
 #                   rather than editing them within the script.
 #
 # v1.11 (01.31.01)
@@ -3096,7 +3135,7 @@ putloglev o * "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 # v1.8.1 (01-14-00)
 #  MC_8 - - *search* found the word, but a search* or search would not find the
 #           badword, fixed.
-#  MC_8 - - Fixed the "duration ..." thing (showed up in the post via dcc),
+#  MC_8 - - Fixed the "duration ..." thing (showed up in the post via DCC),
 #           forgot the []'s
 #
 # v1.8 (01-03-00)
