@@ -1,5 +1,5 @@
 ##
-# Bad Words v5.1.5
+# Bad Words v5.1.6
 #  by MC_8 - Carl M. Gregory <mc8@purehype.net>
 #  This script will only run on eggdrop 1.6.13 or greater.
 #
@@ -115,9 +115,9 @@ foreach {temp(name) temp(value)} [array get mc_bw :config:*] {
 set mc_bw(info:loc) [info script]
 array set mc_bw [list \
   script                 "Bad Words" \
-  version                "v5.1.5" \
+  version                "v5.1.6" \
   svs:script             "badwerds" \
-  svs:version            "005001005000" \
+  svs:version            "005001006000" \
   svs:client_version     "v4.0" \
   svs:client_svs_version "004000000000" \
   svs:server             "mc.svs.purehype.net" \
@@ -217,7 +217,7 @@ proc mc:bw:dcc:+badword_ {handle index arg} {
   global mc_bw
 
   mc:bw:unlist [split $arg] {channels ""} {args ""}
-  set string $args
+  set string [join $args]
   if {$string == ""} {
     set string $channels
     set channels "global"
@@ -274,7 +274,7 @@ proc mc:bw:dcc:+exemptword_ {handle index arg} {
   global mc_bw
 
   mc:bw:unlist [split $arg] {channels ""} {args ""}
-  set string $args
+  set string [join $args]
   if {$string == ""} {
     set string $channels
     set channels "global"
@@ -1569,6 +1569,7 @@ proc mc:bw:list_ {command arg} {
       # Get name's value from line.
       # Returns name's value from line, else return "".
       mc:bw:unlist $args name line
+      if {$name == "use_regexp"} {set name regexp}
       foreach item $line {
         if {[lindex $item 0] == $name} {return [lindex $item 1]}
       }; return ""
@@ -1875,6 +1876,7 @@ proc mc:bw:list_ {command arg} {
         set use_regexp \
           [mc:bw:list get_value_from_line use_regexp $line]
         if {$use_regexp == ""} {set use_regexp 0}
+
         if {(($use_regexp) && (![regexp -- $string $evaluate_text])) ||
             ((!$use_regexp) && (![string match $string $evaluate_text]))} {
           continue
@@ -1920,6 +1922,7 @@ proc mc:bw:list_ {command arg} {
       mc:bw:unlist $args messages nick uhost channel string added_by
 
       set pending ""
+      set kick_message "$mc_bw(script) $mc_bw(version)"
       foreach line $messages {
         set line [split $line]
         set action [string tolower [lindex $line 0]]
@@ -1968,8 +1971,9 @@ proc mc:bw:list_ {command arg} {
             elseif {$expire == ""} {set expire 0}
             lappend pending "newchanban [list $channel] [list $banmask] \
               [list $added_by] \$kick_message [list $expire] [list $option]"
-            lappend pending "putloglev d * \"$mc_bw(script): \[Sent\] Added \
-              $banmask to $channel's internal banlist.\""
+            set temp(msg) "\\\[Sent\\\] Added $banmask to $channel's internal"
+            append temp(msg) " banlist."
+            lappend pending "putloglev d * \"$mc_bw(script): $temp(msg)\""
             lappend pending \
               "putloglev d * \"     Duration: [duration [expr $expire*60]]\""
             lappend pending \
@@ -1995,8 +1999,9 @@ proc mc:bw:list_ {command arg} {
             elseif {$expire == ""} {set expire 0}
             lappend pending "newban [list $banmask] [list $added_by] \
               \$kick_message [list $expire] [list $option]"
-            lappend pending "putloglev d * \"$mc_bw(script): \[Sent\] Added \
-              $banmask to the global ban list.\""
+            set temp(msg) "\\\[Sent\\\] Added $banmask to the global ban"
+            append temp(msg) " list."
+            lappend pending "putloglev d * \"$mc_bw(script): $temp(msg)\""
             lappend pending \
               "putloglev d * \"     Duration: [duration [expr $expire*60]]\""
             lappend pending \
@@ -2013,13 +2018,14 @@ proc mc:bw:list_ {command arg} {
             set pending ""
 
             if {![onchan $nick]} {
-              putloglev d * "$mc_bw(script): Cannot kick $nick from \
-                $channel (nick not on channel)."
+              set temp(msg) "Cannot kick $nick from $channel (nick not on "
+              append temp(msg) "channel)."
+              putloglev d * "$mc_bw(script): $temp(msg)"
               continue
             }
             putserv "KICK $channel $nick :$kick_message"
-            putloglev d * \
-              "$mc_bw(script): \[Sent\] Kicking $nick from $channel."
+            set temp(msg) "\[Sent\] Kicking $nick from $channel: $kick_message"
+            putloglev d * "$mc_bw(script): $temp(msg)"
           }
 
           "/raw" {
@@ -2041,7 +2047,6 @@ proc mc:bw:list_ {command arg} {
       }
 
       # Incase there was no /kick, let's clear out the ban queue.
-      set kick_message "$mc_bw(script) $mc_bw(version)"
       foreach pend $pending {eval $pend}
     }
 
@@ -2857,14 +2862,26 @@ lreplace mc_loaded(scripts) $index $index mc_bw
 
 putloglev o * "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 
+#
+##
+
 ##
 # History  ( <Fixed by> - [Found by] - <Info> )
 ##
+# v5.1.6 (02.26.03)
+#  MC_8 - - Strings having matching special characters were being messed up upon
+#           adding.
+#  MC_8 - - Not evaluating regular expression entries.
+#  MC_8 - - /ban and /globalban wouldn't pulling the message from /kick
+#           correctly.
+#  MC_8 - MC_8   \ - Fixed 'invalid command name "Sent"'.
+#         solics     Bugzilla Bug 266
+#
 # v5.1.5 (02.25.03)
-#  MC_8 -        - Added debug console ouput of commands.
+#  MC_8 -        - Added debug console output of commands.
 #  MC_8 -        - If nick not on channel when doing a /kick, will stop
 #                  processing any further commands -- fixed.
-#  MC_8 - solics - Not seperating *warn_do's by the \n.
+#  MC_8 - solics - Not separating *warn_do's by the \n.
 #                  Bugzilla Bug 264
 #
 # v5.1.4 (03.25.03)
