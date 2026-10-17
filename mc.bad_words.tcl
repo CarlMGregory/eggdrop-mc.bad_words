@@ -1,9 +1,6 @@
 ##
-# Bad Words v3.0.1 by (Carl M. Gregory) MC_8 <gregory@worldinter.net>
-#  This script will only work with eggdrop 1.5 and up only.
-#
-# If you have any questions/comments/idea's, please email me!
-# ( Include the script name and version in the title, if you do email me. )
+# Bad Words v3.1 by MC_8 - Carl M. Gregory <mc8@purehype.net>
+#  This script will only work with eggdrop 1.5.5 or greater.
 #
 # My SVS Website - http://mc.purehype.net:81/
 ##
@@ -16,6 +13,14 @@
 ##
 # HISTORY
 ##
+# v3.1 (11.14.01)
+#  MC_8 - Updated SVS v1.3 to v2.0.
+#  MC_8 - Added help argument to show proper syntax for all commands,
+#         .<command> -?
+#  MC_8 - Fixed 'Invalid channel option: #channel', in .+badword or 
+#         +exemptword prompt interface.
+#  MC_8 - Dr.W95 - Added use:regexp.
+#
 # v3.0.1 (10.30.01)
 #  MC_8 - Rewrote explination of ban masking types.
 #  MC_8 - Rewrote the ban masking proc again, much smaller now.
@@ -384,13 +389,20 @@ set mc_bw(relay:rx) 1
 # above) are enabled.
 set mc_bw(relay:key) "BlaBlaBlaBla"
 
-## MC SVS (Script Version Service) v1.3 ##
-# [0=no/1=yes] Do you want the script to auto connect to MC_8's SVS 
-# (Script Version Service) to see if there is a newer version of this 
-# script avilable?  It will only tell you if there is a newer version,
-# it's up to you to get the newest version. I decided not to auto update
-# the code, there may be new features in the newest script that may 
-# require your attention.
+# [0=no/1=yes] Do you want to use regular expression matching rather than
+# normal wildcarded matching?  Warning, regular expressions are advanced.
+# If you don't know how to use regular expressions... do not turn this on.
+# http://tcl.activestate.com/man/tcl8.3/TclCmd/re_syntax.htm#M2
+# http://dev.scriptics.com/doc/howto/regexp81.html
+set mc_bw(use:regexp) 0
+
+
+## MC SVS (Script Version Service) v2.0 ##
+# Do you want the bot to connection to MC_8's SVS to see if there are newer versions
+# of this script avilable?  It will only tell you -- It's up to you to get the newest
+# version (I decided not to auto update the code, there may be new features in the
+# newest script that may require your attention).
+# 0=no/1=yes
 set mc_bw(svs:enabled) 1
 
 # Once a day the script will check with the SVS -- this specifies when
@@ -408,9 +420,10 @@ set mc_bw(svs:check) 3
 # ' ' (space).
 set mc_bw(svs:notify) "MC_8"
 
-# Do you want to monitor only stable versions, disregarding beta versions?
-#    0 = Tell me about all version, even beta versions.
-#    1 = Just tell me about new stable versions.
+# Do you want even beta version notified to whomever you have set?  Or just
+# stable releases of the script?
+#  0 = Tell me about all version, even beta versions.
+#  1 = Just tell me about new stable versions.
 set mc_bw(svs:stableonly) 0
 
 
@@ -419,14 +432,19 @@ set mc_bw(svs:stableonly) 0
 ## Coding below, do not proceed -- you are done with the settings.
 ###
 
-set mc_bw(version) v3.0.1
-set mc_bw(svs:script) "badwerds 003000001000"
-set mc_bw(svs:server) "mc.purehype.net 8085"
+set mc_bw(script)      "Bad Words"
+set mc_bw(version)     "v3.1"
+set mc_bw(svs:script)  "badwerds"
+set mc_bw(svs:version) "003001000000"
+set mc_bw(svs:server)  "mc.purehype.net"
+set mc_bw(svs:port)    "81"
+set mc_bw(svs:get)     "/"
+set mc_bw(svs:query)   "svs=$mc_bw(svs:script)&version=$mc_bw(svs:version)"
 
-if {$numversion < "1050000"} {
- putlog "Bad Words $mc_bw(version) by MC_8 is for eggdrop 1.5 and up only."
- putlog "Bad Words will not work with eggdrop $version."
- putlog "Bad Words not loaded."
+if {$numversion < "1050500"} {
+ putlog "$mc_bw(script) $mc_bw(version) by MC_8 will only work on eggdrop 1.5.5 or greater."
+ putlog "$mc_bw(script) $mc_bw(version)  will not work with eggdrop $version."
+ putlog "$mc_bw(script) $mc_bw(version)  not loaded."
  return 1
 }
 
@@ -461,13 +479,17 @@ proc *mc:bw:dcc:+badword {hand idx arg} {
  global mc_bw
  if {$arg == ""} {
   control $idx mc:bw:control:+badword
-  putdcc $idx "Bad Words, entering +badword prompt interface."
+  putdcc $idx "$mc_bw(script), entering +badword prompt interface."
   putdcc $idx "  To exit early: *bye*"
   putdcc $idx "______________________________________________"
   set mc_bw($idx:switch) 2
   set mc_bw($idx:arg) ""
   putdcc $idx ""
   putdcc $idx "\[#channel|message|global\] What channel?"
+  return 0
+ }
+ if {[regexp -- {^-?(-h(elp)?|-\?|-s(yntax)?)$} $arg]} {
+  putdcc $idx "$mc_bw(script): Syntax should be\; +badword \[\[#channel|&message|&global\] <*bad*string*> \[#warnings\] \[%expire <XdXhXm>\] <kick/warning message>\]"
   return 0
  }
  set temp [mc:bw:inter:examin $arg $idx $hand +]
@@ -482,24 +504,24 @@ proc *mc:bw:dcc:+badword {hand idx arg} {
  while {[regexp -- \\*\\* $string]} {regsub -all -- \\*\\* $string * string}
  if {([string index $chan 0] != "&") && (![validchan $chan])} {
   putcmdlog "#$hand# Denied (invalid channel): +badwords $arg"
-  putdcc $idx "Badwords: Invalid channel: $chan"
+  putdcc $idx "$mc_bw(script): Invalid channel: $chan"
   putdcc $idx "Syntax: +badword \[\[#channel|&message|&global\] <*bad*string*> \[#warnings\] \[%expire <XdXhXm>\] <kick/warning message>\]"
   return 0
  }
  if {$message == ""} {
   putcmdlog "#$hand# Denied (no message specified): +badwords $arg"
-  putdcc $idx "Badwords: No message specified."
+  putdcc $idx "$mc_bw(script): No message specified."
   putdcc $idx "Syntax: +badword \[\[#channel|&message|&global\] <*bad*string*> \[#warnings\] \[%expire <XdXhXm>\] <kick/warning message>\]"
   return 0
  }
  if {!$has_access} {
   putcmdlog "#$hand# Denied (no access): +badwords $arg"
-  putdcc $idx "Badwords:  Access denied:  '$access' is required."
+  putdcc $idx "$mc_bw(script):  Access denied:  '$access' is required."
   return 0
  }
  if {![mc:bw:inter:list add $chan $string $message $hand $warnings $expire . . -bad]} {
   putcmdlog "#$hand# Denied (already exists): +badwords $arg"
-  putdcc $idx "Badwords:  Access denied, entry already exists."
+  putdcc $idx "$mc_bw(script):  Access denied, entry already exists."
   return 0
  }
  putcmdlog "#$hand# +badwords $arg"
@@ -508,7 +530,7 @@ proc *mc:bw:dcc:+badword {hand idx arg} {
   &message {set x "messages"}
   default {set x "$chan's"}
  }
- putdcc $idx "Badwords:  Added '$string' (warn/kick msg: $message) to $x badwords list."
+ putdcc $idx "$mc_bw(script):  Added '$string' (warn/kick msg: $message) to $x badwords list."
  return 0
 }
 
@@ -529,10 +551,12 @@ proc mc:bw:control:+badword {idx arg} {
   }
   2 {
    if {$arg != "----redo:mc:bw:control"} {
-    if {([string index $arg 0] == "#") && (![validchan $arg])} {
-     putdcc $idx "Invalid channel: $arg"
-     set mc_bw($idx:switch) 1
-     mc:bw:control:+badword $idx . ; return 0
+    if {[string index $arg 0] == "#"} {
+     if {![validchan $arg]} {
+      putdcc $idx "Invalid channel: $arg"
+      set mc_bw($idx:switch) 1
+      mc:bw:control:+badword $idx . ; return 0
+     }
     } elseif {($arg != "global") && ($arg != "message")} {
      putdcc $idx "Invalid channel option: $arg"
      set mc_bw($idx:switch) 1
@@ -599,13 +623,17 @@ proc *mc:bw:dcc:+exemptword {hand idx arg} {
  global mc_bw
  if {$arg == ""} {
   control $idx mc:bw:control:+exemptword
-  putdcc $idx "Bad Words, entering +exemptword prompt interface."
+  putdcc $idx "$mc_bw(script), entering +exemptword prompt interface."
   putdcc $idx "  To exit early: *bye*"
   putdcc $idx "_________________________________________________"
   set mc_bw($idx:arg) ""
   putdcc $idx ""
   putdcc $idx "\[#channel|message|global\] What channel?"
   set mc_bw($idx:switch) 2
+  return 0
+ }
+ if {[regexp -- {^-?(-h(elp)?|-\?|-s(yntax)?)$} $arg]} {
+  putdcc $idx "$mc_bw(script): Syntax should be\; +exemptword \[#channel|&message|&global\] <*exempt*string*> \[%expire <XdXhXm>\]"
   return 0
  }
  set temp [mc:bw:inter:examin $arg $idx $hand +]
@@ -618,24 +646,24 @@ proc *mc:bw:dcc:+exemptword {hand idx arg} {
  while {[regexp -- \\*\\* $string]} {regsub -all -- \\*\\* $string * string}
  if {([string index $chan 0] != "&") && (![validchan $chan])} {
   putcmdlog "#$hand# Denied (invalid channel): +exemptwords $arg"
-  putdcc $idx "Badwords: Invalid channel: $chan"
+  putdcc $idx "$mc_bw(script): Invalid channel: $chan"
   putdcc $idx "Syntax: +exemptword \[\[#channel|&message|&global\] <*bad*string*> \[%expire <XdXhXm>\]\]"
   return 0
  }
  if {$string == ""} {
   putcmdlog "#$hand# Denied (no *exempt*string* specified): +exemptwords $arg"
-  putdcc $idx "Badwords: No *exempt*string* specified."
+  putdcc $idx "$mc_bw(script): No *exempt*string* specified."
   putdcc $idx "Syntax: +exemptword \[\[#channel|&message|&global\] <*bad*string*> \[%expire <XdXhXm>\]\]"
   return 0
  }
  if {!$has_access} {
   putcmdlog "#$hand# Denied (no access): +exemptwords $arg"
-  putdcc $idx "Badwords:  Access denied:  '$access' is required."
+  putdcc $idx "$mc_bw(script):  Access denied:  '$access' is required."
   return 0
  }
  if {![mc:bw:inter:list add $chan $string . $hand . $expire . . -exempt]} {
   putcmdlog "#$hand# Denied (already exists): +exemptwords $arg"
-  putdcc $idx "Badwords:  Access denied, entry already exists."
+  putdcc $idx "$mc_bw(script):  Access denied, entry already exists."
   return 0
  }
  putcmdlog "#$hand# +exemptwords $arg"
@@ -644,7 +672,7 @@ proc *mc:bw:dcc:+exemptword {hand idx arg} {
   &message {set x "messages"}
   default {set x "$chan's"}
  }
- putdcc $idx "Badwords:  Added '$string' to $x exemptwords list."
+ putdcc $idx "$mc_bw(script):  Added '$string' to $x exemptwords list."
  return 0
 }
 
@@ -665,10 +693,12 @@ proc mc:bw:control:+exemptword {idx arg} {
   }
   2 {
    if {$arg != "----redo:mc:bw:control"} {
-    if {([string index $arg 0] == "#") && (![validchan $arg])} {
-     putdcc $idx "Invalid channel: $arg"
-     set mc_bw($idx:switch) 1
-     mc:bw:control:+exemptword $idx . ; return 0
+    if {[string index $arg 0] == "#"} {
+     if {![validchan $arg]} {
+      putdcc $idx "Invalid channel: $arg"
+      set mc_bw($idx:switch) 1
+      mc:bw:control:+exemptword $idx . ; return 0
+     }
     } elseif {($arg != "global") && ($arg != "message")} {
      putdcc $idx "Invalid channel option: $arg"
      set mc_bw($idx:switch) 1
@@ -719,12 +749,16 @@ proc *mc:bw:dcc:-badword {hand idx arg} {
  set access [join [lindex $temp 3]]
  if {!$has_access} {
   putcmdlog "#$hand# Denied (no access): -badwords $arg"
-  putdcc $idx "Badwords:  Access denied:  '$access' is required."
+  putdcc $idx "$mc_bw(script):  Access denied:  '$access' is required."
+  return 0
+ }
+ if {($string == "") || ([regexp -- {^-?(-h(elp)?|-\?|-s(yntax)?)$} $arg])} {
+  putdcc $idx "$mc_bw(script): Syntax, should be\; -badword \[<#>channel|&message|&global\] <*bad*string*>"
   return 0
  }
  if {![mc:bw:inter:list rem $chan $string . . . . . . -bad]} {
   putcmdlog "#$hand# Denied (no entry): -badwords $arg"
-  putdcc $idx "Badwords:  No such entry: $chan '$string']"
+  putdcc $idx "$mc_bw(script):  No such entry: $chan '$string'"
   return 0
  }
  putcmdlog "#$hand# -badwords $arg"
@@ -733,7 +767,7 @@ proc *mc:bw:dcc:-badword {hand idx arg} {
   &message {set x "messages"}
   default {set x "$chan's"}
  }
- putdcc $idx "Badwords:  Removed '$string' from $x badwords list."
+ putdcc $idx "$mc_bw(script):  Removed '$string' from $x badwords list."
  return 0
 }
 
@@ -749,12 +783,16 @@ proc *mc:bw:dcc:-exemptword {hand idx arg} {
  set access [join [lindex $temp 3]]
  if {!$has_access} {
   putcmdlog "#$hand# Denied (no access): -exemptwords $arg"
-  putdcc $idx "Badwords:  Access denied:  '$access' is required."
+  putdcc $idx "$mc_bw(script):  Access denied:  '$access' is required."
+  return 0
+ }
+ if {($string == "") || ([regexp -- {^-?(-h(elp)?|-\?|-s(yntax)?)$} $arg])} {
+  putdcc $idx "$mc_bw(script): Invalid Syntax, should be\; -exemptword \[<#>channel|&message|&global\] <*exempt*string*>"
   return 0
  }
  if {![mc:bw:inter:list rem $chan $string . . . . . . -exempt]} {
   putcmdlog "#$hand# Denied (no entry): -exemptwords $arg"
-  putdcc $idx "Badwords:  No such entry: $chan '$string'"
+  putdcc $idx "$mc_bw(script):  No such entry: $chan '$string'"
   return 0
  }
  putcmdlog "#$hand# -exemptwords $arg"
@@ -763,7 +801,7 @@ proc *mc:bw:dcc:-exemptword {hand idx arg} {
   &message {set x "messages"}
   default {set x "$chan's"}
  }
- putdcc $idx "Badwords:  Removed '$string' from $x exemptwords list."
+ putdcc $idx "$mc_bw(script):  Removed '$string' from $x exemptwords list."
  return 0
 }
 
@@ -771,6 +809,10 @@ proc *mc:bw:dcc:-exemptword {hand idx arg} {
 bind dcc - badwords *mc:bw:dcc:badword
 proc *mc:bw:dcc:badword {hand idx arg} {
  global mc_bw
+ if {[regexp -- {^-?(-h(elp)?|-\?|-s(yntax)?)$} $arg]} {
+  putdcc $idx "$mc_bw(script): Syntax, should be\; badwords \[<#>channel|&message|&global|all\]"
+  return 0
+ }
  set temp [mc:bw:inter:examin $arg $idx $hand 0]
  set chan [join [lindex $temp 0]]
  if {$chan == "&default"} {set chan "all"}
@@ -778,11 +820,11 @@ proc *mc:bw:dcc:badword {hand idx arg} {
  set access [join [lindex $temp 3]]
  if {!$has_access} {
   putcmdlog "#$hand# Denied (no access): badwords $chan"
-  putdcc $idx "Badwords:  Access denied:  '$access' is required."
+  putdcc $idx "$mc_bw(script):  Access denied:  '$access' is required."
   return 0
  }
  putcmdlog "#$hand# badwords $chan"
- putdcc $idx "Badwords listing for '$chan':"
+ putdcc $idx "$mc_bw(script) listing for '$chan':"
  foreach line [mc:bw:inter:list list $chan . . . . . . . -bad] {
   set ta [join [lindex $line 1]] ;# Time added
   set ch [join [lindex $line 2]] ;# Channel
@@ -813,6 +855,10 @@ proc *mc:bw:dcc:badword {hand idx arg} {
 bind dcc - exemptwords *mc:bw:dcc:exemptword
 proc *mc:bw:dcc:exemptword {hand idx arg} {
  global mc_bw
+ if {[regexp -- {^-?(-h(elp)?|-\?|-s(yntax)?)$} $arg]} {
+  putdcc $idx "$mc_bw(script): Syntax, should be\; exemptwords \[<#>channel|&message|&global|all\]"
+  return 0
+ }
  set temp [mc:bw:inter:examin $arg $idx $hand 0]
  set chan [join [lindex $temp 0]]
  if {$chan == "&default"} {set chan "all"}
@@ -820,7 +866,7 @@ proc *mc:bw:dcc:exemptword {hand idx arg} {
  set access [join [lindex $temp 3]]
  if {!$has_access} {
   putcmdlog "#$hand# Denied (no access): exemptwords $chan"
-  putdcc $idx "Badwords:  Access denied:  '$access' is required."
+  putdcc $idx "$mc_bw(script):  Access denied:  '$access' is required."
   return 0
  }
  putcmdlog "#$hand# exemptwords $chan"
@@ -940,10 +986,10 @@ proc mc:bw:bw {nick uhost hand chan arg type} {
      putallbots [list badwords $mc_bw(relay:key) KICK $channel $nick $message]
      lappend action "relay kick request (not op'd in $channel)"
     } elseif {([onchan $nick $channel]) && ([isop $botnick $channel])} {
-     putserv "KICK $channel $nick :$message";lappend action "kicked ($channel)"
+     putserv "KICK $channel $nick :$message"; lappend action "kicked ($channel)"
     }
    }
-  };putlog "Badwords: $nick was caught saying '$l_st' $x.  Action taken: [join $action ", "]"
+  };putlog "$mc_bw(script): $nick was caught saying '$l_st' $x.  Action taken: [join $action ", "]"
  } else {
   set banmask [mc:bw:inter:masktype $nick!$uhost $mc_bw(banmask)]
   set global [string match @* $mc_bw(bantime)]
@@ -1002,7 +1048,7 @@ proc mc:bw:bw {nick uhost hand chan arg type} {
    }
   }
   if {$chan == "&message"} {set x "to me"} else {set x "in $chan"}
-  putlog "Badwords: $nick was caught saying '$l_st' $x.  Action taken: [join $action ", "]"
+  putlog "$mc_bw(script): $nick was caught saying '$l_st' $x.  Action taken: [join $action ", "]"
  }
 }
 
@@ -1019,11 +1065,11 @@ proc mc:bw:bot {from command arg} {
  switch -- $cmd {
   KICK {
    putserv "KICK $a $b :$c"
-   putloglev b * "Badwords:  Relay from $from, kicking $b in $a."
+   putloglev b * "$mc_bw(script):  Relay from $from, kicking $b in $a."
   }
   BAN {
    putserv "MODE $a +b $b"
-   putloglev b * "Badwords:  Relay from $from, banning $b in $a."
+   putloglev b * "$mc_bw(script):  Relay from $from, banning $b in $a."
   }
 # > x share cmd arg
   share {
@@ -1049,7 +1095,7 @@ proc mc:bw:bot {from command arg} {
      if {![mc:bw:inter:list add $ch $st $ms $hd $wn $ex . NO $ty]} {
       mc:bw:inter:list update $ch $st $ms $hd $wn $ex $lu NO $ty
      }
-     putloglev b * "Badwords:  Share from $from, added ${vt}word: $ch $st"
+     putloglev b * "$mc_bw(script):  Share from $from, added ${vt}word: $ch $st"
     }
     load {
      if {![mc:bw:inter:list add $ch $st $ms $hd $wn $ex . NO $ty]} {
@@ -1059,7 +1105,7 @@ proc mc:bw:bot {from command arg} {
     rem {
      mc:bw:inter:list rem $ch $st . . . . . NO $ty
      if {$ms != ""} {set ms "($ms)"}
-     putloglev b * "Badwords:  Share from $from, removed ${vt}word: $ch $st $ms"
+     putloglev b * "$mc_bw(script):  Share from $from, removed ${vt}word: $ch $st $ms"
     }
     U { mc:bw:inter:list save -quiet; mc:bw:inter:list load $from }
     update {
@@ -1067,13 +1113,13 @@ proc mc:bw:bot {from command arg} {
       mc:bw:inter:list add $ch $st $ms $hd $wn $ex . NO $ty
      }
      if {$q != "-quiet"} {
-      putloglev b * "Badwords:  Share from $from, updated ${vt}word: $ch $st"
+      putloglev b * "$mc_bw(script):  Share from $from, updated ${vt}word: $ch $st"
      }
     }
-    default {putloglev b * "Badwords:  Share from $from, unknown request: $cmd"}
+    default {putloglev b * "$mc_bw(script):  Share from $from, unknown request: $cmd"}
    }
   }
-  default {putloglev b * "Badwords:  Relay from $from, unknown request: $cmd"}
+  default {putloglev b * "$mc_bw(script):  Relay from $from, unknown request: $cmd"}
  }
 }
 
@@ -1159,7 +1205,7 @@ proc mc:bw:inter:list {cmd {chan {}} {string {}} {text {}} {hand {}} {warnings {
       &message {set x "messages"}
       default {set x "$chan's"}
      }
-     putlog "Badwords:  Removed '$st' from $x [string trimleft ${type} -]words list. (expired)"
+     putlog "$mc_bw(script):  Removed '$st' from $x [string trimleft ${type} -]words list. (expired)"
      set ex 0
     } else {break}
    }
@@ -1215,11 +1261,12 @@ proc mc:bw:inter:list {cmd {chan {}} {string {}} {text {}} {hand {}} {warnings {
     set wn [join [lindex $line 6]] ;# Warnings
     set ex [join [lindex $line 7]] ;# Expires
     set lu [join [lindex $line 8]] ;# Last used
-    if {[string match [string tolower $st] [string tolower $text]]} {
+    if {(($mc_bw(use:regexp)) && ([regexp -- [string tolower $st] [string tolower $text]])) ||
+        ((!$mc_bw(use:regexp)) && ([string match [string tolower $st] [string tolower $text]]))} {
      mc:bw:inter:list update $chan $st $ms $ad $wn $ex [clock seconds] -quiet $type
      return $line
     }
-   };return ""
+   }; return ""
   }
   rem {
    if {![mc:bw:inter:list exists $chan $string . . . . . . $type]} {return 0}
@@ -1418,60 +1465,93 @@ proc mc:bw:inter:masktype {uhost type} {
  }; return [format "%s!%s@%s" $nick $ident $host]
 }
 
+## SVS v2.0
+if {(![info exists mc_bw(svs:enabled)]) ||
+    (![regexp -- {^(0|1)$} $mc_bw(svs:enabled)])} {set mc_bw(svs:enabled) 0}
+if {(![info exists mc_bw(svs:check)]) ||
+    ([regexp -- {[^0-9]} $mc_bw(svs:check)])} {set mc_bw(svs:check) 0}
+if {![info exists mc_bw(svs:notify)]} {set mc_bw(svs:notify) $owner}
+if {(![info exists mc_bw(svs:stableonly)]) ||
+    (![regexp -- {^(0|1)$} $mc_bw(svs:stableonly)])} {set mc_bw(svs:stableonly) 0}
+foreach bind [binds mc:bw:svs:time] {
+ unbind [lindex $bind 0] [lindex $bind 1] [lindex $bind 2] [lindex $bind 4]
+}
+foreach command [info commands mc:bw:svs:time] {rename $command ""}
 if {$mc_bw(svs:enabled)} {
  if {($mc_bw(svs:check) > "23") || ($mc_bw(svs:check) < "0")} {set mc_bw(svs:check) 00}
  if {[string length $mc_bw(svs:check)] == "1"} {set mc_bw(svs:check) 0$mc_bw(svs:check)}
- if {$mc_bw(svs:stableonly)} {
-  set mc_bw(svs:script) [string range $mc_bw(svs:script) 0 [expr [string length $mc_bw(svs:script)]-4]]999
- }
- catch {unbind time - "00 $mc_bw(svs:oldcheck) * * *" mc:bw:svs:time}
- set mc_bw(svs:oldcheck) $mc_bw(svs:check)
- bind time - "00 $mc_bw(svs:check) * * *" mc:bw:svs:time
- proc mc:bw:svs:time {min hour day month year} {
+ bind time - "00 $mc_bw(svs:check) *" mc:bw:svs:time
+ proc mc:bw:svs:time {{args ""}} {
   global mc_bw
-  catch {control [connect [lindex $mc_bw(svs:server) 0] [lindex $mc_bw(svs:server) 1]] mc:bw:svs:interface}
+  if {[catch {socket -async $mc_bw(svs:server) $mc_bw(svs:port)} sid]} {;\
+   putlog "SVS Error\[$mc_bw(svs:script)/$mc_bw(svs:version)\]:  $sid"
+   return 1
+  }
+  fconfigure $sid -blocking 0 -buffering line
+  set tout [after 60000 "mc:bw:svs:interface $sid timeout"]
+  fileevent $sid readable "mc:bw:svs:interface $sid $tout"
+  puts $sid "GET $mc_bw(svs:get)?$mc_bw(svs:query) HTTP/1.0\
+           \nHost: $mc_bw(svs:server)\n"
+  flush $sid
  }
 }
-proc mc:bw:svs:interface {idx args} {
- global mc_bw;set args [join $args]
- switch -- [lindex $args 0] {
-  "" {return 1}
-  000 {putdcc $idx q}
-  002 {putdcc $idx [lindex $mc_bw(svs:script) 0]}
-  003 {
-   set args [lrange $args 1 e]
-   if {[lindex $args 0] != [lindex $mc_bw(svs:script) 0]} {return 0}
-   putdcc $idx q
-   if {[lindex $args 1] > [lindex $mc_bw(svs:script) 1]} {
-    set note [mc:bw:inter:replace [lindex $args 7] "%0 {[lindex $args 0]} %1 {[lindex $args 1]} %2 {[lindex $args 2]}"]
-    set note [mc:bw:inter:replace $note "%3 {[lindex $args 3]} %4 {[lindex $args 4]} %5 {[lindex $args 5]}"]
-    set note [mc:bw:inter:replace $note "%6 {[lindex $args 6]} %8 {[lindex $args 8]} %version {$mc_bw(version)}"]
-    set note [mc:bw:inter:replace $note "%9 {[lindex $args 9]} %10 {[lindex $args 10]} %11 {[lindex $args 11]}"]
-    set note [mc:bw:inter:replace $note "%12 {[lindex $args 12]} %13 {[lindex $args 13]} %14 {[lindex $args 14]}"]
-    set note [mc:bw:inter:replace $note "%15 {[lindex $args 15]} %16 {[lindex $args 16]} %17 {[lindex $args 17]}"]
-    set note [mc:bw:inter:replace $note "%18 {[lindex $args 18]} %19 {[lindex $args 19]} %20 {[lindex $args 20]}"]
-    foreach notify [join [split $mc_bw(svs:notify) ",;"]] {
-     set outnote [mc:bw:inter:replace $note "%nick {$notify}"]
-     if {[string match "*$outnote*" "[notes $notify -[notes $notify]]"]} {
-      set cont 0
-      foreach unote [notes $notify -[notes $notify]] {
-       if {$outnote == [lindex $unote 2]} {set cont 1;break}
-      };if {$cont} {continue}
-     }
-     switch -- [sendnote SVS $notify $outnote] {
-      0 {
-       if {![validuser $notify]} {set x "invalid user"} else {set x "unknown reason"}
-       putlog "MC SVS for [lindex $mc_bw(svs:script) 0] had some errors updating $notify on current version of script; $x"
+proc mc:bw:svs:interface {sid tout} {
+ global mc_bw
+ if {$tout == "timeout"} {
+  putlog "SVS Warning\[$mc_bw(svs:script)/$mc_bw(svs:version)\]:  SVS Server timed out."
+  close $sid
+  return 0
+ }; after cancel $tout
+ set temp 0
+ while {![eof $sid]} {
+  gets $sid get
+  if {$temp < "2"} {
+   if {$get == ""} {incr temp; if {$temp == "1"} {set temp 2}}
+   continue
+  }; if {$get == ""} {continue}
+  switch -- [lindex $get 0] {
+   003 {
+    set reply [lrange $get 1 end]
+    if {[lindex $reply 0] != $mc_bw(svs:script)} {
+     putlog "SVS Error\[$mc_bw(svs:script)/$mc_bw(svs:version)\]:  SVS Server sent wrong info, got [lindex $reply 0]"
+     break   
+    }
+    if {$mc_bw(svs:stableonly)} {
+     set temp [string range $mc_bw(svs:version) 0 8]999
+    } else {set temp [string range $mc_bw(svs:version) 0 11]}
+    if {[lindex $reply 1] > $temp} {
+     set note [lindex $reply 5]
+     regsub -- %0 $note [lindex $reply 0] note
+     regsub -- %1 $note [lindex $reply 1] note
+     regsub -- %2 $note [lindex $reply 2] note
+     regsub -- %3 $note [lindex $reply 3] note
+     regsub -- %4 $note [lindex $reply 4] note
+     regsub -- %version $note $mc_bw(version) note
+     foreach to [split $mc_bw(svs:notify) ",; "] {
+      if {$to == ""} {continue}
+      regsub -- %nick $note $to outnote
+      if {[string match *$outnote* [set unotes [notes $to -[notes $to]]]]} {
+       set temp 0
+       foreach unote $unotes {
+        if {$outnote == [lindex $unote 2]} {set temp 1; break}
+       }; if {$temp} {continue}
       }
-      3 {putlog "MC SVS for [lindex $mc_bw(svs:script) 0] had some errors updating $notify on current version of script; notebox too full!"}
+      switch -- [sendnote SVS $to $outnote] {
+       0 {
+        if {![validuser $notify]} {set x "invalid user"} else {set x "unknown error"}
+        putlog "SVS Error\[$mc_bw(svs:script)/$mc_bw(svs:version)\]:  Trying to send note to $to, $x."
+       }
+       3 {putlog "SVS Error\[$mc_bw(svs:script)/$mc_bw(svs:version)\]:  Trying to send note to $to, notebox too full!"}
+      }
      }
     }
    }
   }
- };return 0
+ }; close $sid
 }
+## ^
 
 bind evnt - save mc:bw:evnt ; proc mc:bw:evnt {type} {mc:bw:inter:list save}
 mc:bw:inter:list load -all
 
-putlog "Bad Words $mc_bw(version) by MC_8 loaded."
+putlog "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
