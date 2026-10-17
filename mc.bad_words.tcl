@@ -1,5 +1,5 @@
 ##
-# Bad Words v5.0
+# Bad Words v5.0.1
 #  by MC_8 - Carl M. Gregory <mc8@purehype.net>
 #  This script will only run on eggdrop 1.5.5 or greater.
 #
@@ -118,9 +118,9 @@ set mc_bw(svs:mode) 0
 #Script:mc_bw
 
 set mc_bw(script)      "Bad Words"
-set mc_bw(version)     "v5.0"
+set mc_bw(version)     "v5.0.0.1"
 set mc_bw(svs:script)  "badwerds"
-set mc_bw(svs:version) "005000000000"
+set mc_bw(svs:version) "005000001000"
 set mc_bw(svs:server)  "mc.svs.purehype.net"
 set mc_bw(svs:port)    "81"
 set mc_bw(svs:get)     "/index.tcl"
@@ -1893,7 +1893,7 @@ proc mc:bw:list_ {command arg} {
             }
             if {![validchan $channel]} {
               mc:bw:list process_messages \
-                [list "/globalban %nick $expire $option] $nick $channel $string
+                [list "/globalban %nick $expire $option"] $nick $channel $string
               continue
             }
             if {[getchanhost $nick] == ""} {
@@ -2757,6 +2757,10 @@ putlog "$mc_bw(script) $mc_bw(version) by MC_8 loaded."
 ##
 # History  ( <Fixed by> - [Found by] - <Info> )
 ##
+# v5.0.1 (02.10.03)
+#  MC_8 - Minwel - Fixed 'missing "'.
+#                  Bugzilla Bug 246
+#
 # v5.0 (01.29.03)
 #  MC_8     -            - Upgraded SVS Client.  v3.1 -> v3.2
 #! MC_8     - nadir    \ - Rewote the entire script.  Everything has changed.
